@@ -1,15 +1,13 @@
 package com.miappvideos.player
 
-import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.PendingIntent
-import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
-import androidx.core.app.NotificationCompat
-import androidx.media3.common.util.NotificationUtil
+import android.util.Log
+import androidx.media3.common.Player
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.miappvideos.MainActivity
@@ -22,18 +20,59 @@ class PlayerService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
+
+        ExoPlayerHolder.ensure(applicationContext)
+        setMediaNotificationProvider(MyMediaNotificationProvider(this))
+
         mediaSession = MediaSession.Builder(this, ExoPlayerHolder.player.player)
+            .setCallback(object : MediaSession.Callback {
+                override fun onConnect(
+                    session: MediaSession,
+                    controllerInfo: MediaSession.ControllerInfo
+                ): MediaSession.ConnectionResult {
+                    val commands = Player.Commands.Builder()
+                        .addAllCommands()
+                        .add(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
+                        .add(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
+                        .build()
+                    return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
+                        .setAvailablePlayerCommands(commands)
+                        .build()
+                }
+
+                override fun onPlayerCommandRequest(
+                    session: MediaSession,
+                    controllerInfo: MediaSession.ControllerInfo,
+                    playerCommand: Int
+                ): Int {
+                    if (playerCommand == Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM) {
+                        Log.d(TAG, "player command: NEXT")
+                        ExoPlayerHolder.player.onNext?.invoke()
+                    } else if (playerCommand == Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM) {
+                        Log.d(TAG, "player command: PREVIOUS")
+                        ExoPlayerHolder.player.onPrevious?.invoke()
+                    }
+                    return super.onPlayerCommandRequest(session, controllerInfo, playerCommand)
+                }
+            })
             .build()
+        addSession(mediaSession!!)
+        Log.d(TAG, "session added: ${getSessions().size}")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val keyCode = intent
+            ?.getParcelableExtra<android.view.KeyEvent>(Intent.EXTRA_KEY_EVENT)
+            ?.keyCode
+        Log.d(TAG, "onStartCommand action=${intent?.action} keyCode=$keyCode")
+        super.onStartCommand(intent, flags, startId)
+
         val videoId = intent?.getStringExtra("video_id")
         val title = intent?.getStringExtra("title") ?: "Reproduciendo"
 
         if (videoId != null) {
             ExoPlayerHolder.player.currentVideoId = videoId
             ExoPlayerHolder.player.currentTitle = title
-            startForeground(NOTIFICATION_ID, createNotification(title))
         }
 
         return START_STICKY
@@ -44,6 +83,7 @@ class PlayerService : MediaSessionService() {
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
+        Log.d(TAG, "onGetSession pkg=${controllerInfo.packageName}")
         return mediaSession
     }
 
@@ -58,10 +98,10 @@ class PlayerService : MediaSessionService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Reproducción de música en segundo plano",
+                getString(R.string.channel_name),
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Notificación para reproducción de música en segundo plano"
+                description = getString(R.string.channel_description)
                 setShowBadge(false)
             }
             val manager = getSystemService(NotificationManager::class.java)
@@ -69,31 +109,18 @@ class PlayerService : MediaSessionService() {
         }
     }
 
-    private fun createNotification(title: String): Notification {
-        val openIntent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
-        val openPendingIntent = PendingIntent.getActivity(
-            this, 0, openIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(title)
-            .setContentText("Reproduciendo música en segundo plano")
-            .setSmallIcon(com.miappvideos.R.drawable.ic_play_arrow)
-            .setContentIntent(openPendingIntent)
-            .setOngoing(true)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .build()
-    }
-
     companion object {
+        private const val TAG = "PlayerService"
         private const val CHANNEL_ID = "background_playback"
-        private const val NOTIFICATION_ID = 1001
     }
 }
 
 object ExoPlayerHolder {
     lateinit var player: ExoPlayerManager
+
+    fun ensure(context: Context) {
+        if (!::player.isInitialized) {
+            player = ExoPlayerManager(context)
+        }
+    }
 }

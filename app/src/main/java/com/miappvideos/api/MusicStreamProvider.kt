@@ -7,16 +7,21 @@ import com.miappvideos.api.innertube.RotatingHttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
+import java.util.concurrent.TimeUnit
 
 /**
  * Orquestador de streams enfocado en audio (estilo OpenTune, codigo propio).
  *
  * Orden de resolucion:
- *  1. InnerTube directo (music.youtube.com) probando los 3 perfiles de ClientProfiles.
- *  2. Fallback al StreamProvider existente (Piped + NewPipeExtractor).
+ *  1. Proxy local (tools/audio_proxy.py en el PC): resuelve la URL con
+ *     po_token via yt-dlp y hace passthrough de rangos, evitando el limite
+ *     de 1 MB de googlevideo (sin potoken la musica se corta a ~1:05).
+ *  2. InnerTube directo (music.youtube.com) probando los 3 perfiles de ClientProfiles.
+ *  3. Fallback al StreamProvider existente (Piped + NewPipeExtractor).
  *
  * Solo se extrae audio (la app es de musica); los resultados se ordenan por
  * bitrate descendente.
@@ -25,20 +30,50 @@ object MusicStreamProvider {
 
     private const val TAG = "MusicStreamProvider"
     private const val JSON_TYPE = "application/json; charset=utf-8"
+    private const val PROXY_LAN = "http://192.168.187.240:8080"
+    private const val PROXY_USB = "http://127.0.0.1:8080"
+
+    private val probeClient = OkHttpClient.Builder()
+        .connectTimeout(1500, TimeUnit.MILLISECONDS)
+        .readTimeout(2500, TimeUnit.MILLISECONDS)
+        .build()
+
     private val cache = mutableMapOf<String, String?>()
 
     suspend fun getAudioStream(videoId: String): String? = withContext(Dispatchers.IO) {
         cache[videoId] ?: run {
-            val result = fetchFromInnerTube(videoId) ?: fetchFromExistingProvider(videoId)
+            val result = fetchFromProxy(videoId)
+                ?: fetchFromInnerTube(videoId)
+                ?: fetchFromExistingProvider(videoId)
             cache[videoId] = result
             result
         }
     }
 
+    private fun fetchFromProxy(videoId: String): String? {
+        for (base in listOf(PROXY_LAN, PROXY_USB)) {
+            try {
+                val probe = Request.Builder()
+                    .url("$base/audio?v=$videoId")
+                    .head()
+                    .build()
+                probeClient.newCall(probe).execute().use { response ->
+                    if (response.isSuccessful) {
+                        Log.d(TAG, "Proxy OK ($base) para $videoId")
+                        return "$base/audio?v=$videoId"
+                    }
+                }
+            } catch (e: Exception) {
+                Log.d(TAG, "Proxy $base no disponible para $videoId: ${e.message}")
+            }
+        }
+        return null
+    }
+
     suspend fun preload(vararg videoIds: String) {
         for (id in videoIds) {
             if (id !in cache) {
-                val url = fetchFromInnerTube(id) ?: fetchFromExistingProvider(id)
+                val url = fetchFromProxy(id) ?: fetchFromInnerTube(id) ?: fetchFromExistingProvider(id)
                 cache[id] = url
             }
         }

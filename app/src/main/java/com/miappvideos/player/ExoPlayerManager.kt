@@ -2,6 +2,7 @@ package com.miappvideos.player
 
 import android.content.Context
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
@@ -34,10 +35,21 @@ class ExoPlayerManager(context: Context) {
     var currentTitle: String = ""
     var currentThumbnail: String? = null
 
+    var onNext: (() -> Unit)? = null
+    var onPrevious: (() -> Unit)? = null
+
     private val listeners = mutableListOf<Player.Listener>()
 
-    fun playUrl(url: String) {
-        val mediaItem = MediaItem.fromUri(url)
+    fun playUrl(url: String, title: String = "") {
+        val mediaItem = MediaItem.Builder()
+            .setUri(url)
+            .setMediaMetadata(
+                MediaMetadata.Builder()
+                    .setTitle(title)
+                    .setArtist("MyTube")
+                    .build()
+            )
+            .build()
         player.setMediaItem(mediaItem)
         player.prepare()
         player.play()

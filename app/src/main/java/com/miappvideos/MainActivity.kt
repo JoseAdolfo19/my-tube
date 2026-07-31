@@ -53,6 +53,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var playerView: PlayerView
     private lateinit var titleTextView: TextView
     private lateinit var btnPlayPause: ImageButton
+    private lateinit var btnPrev: ImageButton
+    private lateinit var btnNext: ImageButton
     private lateinit var btnBackground: ImageButton
     private lateinit var btnPip: ImageButton
     private lateinit var btnSearch: ImageButton
@@ -103,7 +105,13 @@ class MainActivity : AppCompatActivity() {
     private var repeatMode = 0
     private val videoQueue = mutableListOf<com.miappvideos.model.PipedVideo>()
     private var currentQueueIndex = -1
+    private var extendingQueue = false
     private val watchHistory = mutableListOf<com.miappvideos.model.PipedVideo>()
+
+    private val autoplayQueries = listOf(
+        "música popular", "mixes", "cumbia", "salsa", "reggaetón",
+        "rock en español", "baladas", "bachata", "vallenato", "electrónica"
+    )
 
     companion object {
         private const val RC_LOGIN = 9002
@@ -125,6 +133,8 @@ class MainActivity : AppCompatActivity() {
         isSignedIn = currentEmail != null
 
         bindViews()
+
+        requestNotificationPermission()
 
         titleTextView.text = "Bienvenido, $currentName"
 
@@ -156,6 +166,15 @@ class MainActivity : AppCompatActivity() {
         AppCompatDelegate.setDefaultNightMode(mode)
     }
 
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 100)
+        }
+    }
+
     private fun bindViews() {
         rootLayout = findViewById(R.id.rootLayout)
         toolbar = findViewById(R.id.toolbar)
@@ -164,6 +183,8 @@ class MainActivity : AppCompatActivity() {
         playerView = findViewById(R.id.playerView)
         titleTextView = findViewById(R.id.titleTextView)
         btnPlayPause = findViewById(R.id.btnPlayPause)
+        btnPrev = findViewById(R.id.btnPrev)
+        btnNext = findViewById(R.id.btnNext)
         btnBackground = findViewById(R.id.btnBackground)
         btnPip = findViewById(R.id.btnPip)
         btnSearch = findViewById(R.id.btnSearch)
@@ -279,6 +300,9 @@ class MainActivity : AppCompatActivity() {
         miniNext.setOnClickListener { nextVideo() }
         miniExpand.setOnClickListener { togglePlayerMode() }
         btnCollapse.setOnClickListener { togglePlayerMode() }
+
+        playerManager.onNext = { nextVideo() }
+        playerManager.onPrevious = { prevVideo() }
     }
 
     private fun setupRecyclerView() {
@@ -383,6 +407,9 @@ class MainActivity : AppCompatActivity() {
             updateRepeatShuffleTint()
         }
 
+        btnPrev.setOnClickListener { prevVideo() }
+        btnNext.setOnClickListener { nextVideo() }
+
         btnPip.setOnClickListener {
             enterPipMode()
         }
@@ -407,7 +434,10 @@ class MainActivity : AppCompatActivity() {
             val id = checkedIds.firstOrNull() ?: return@setOnCheckedStateChangeListener
             when (id) {
                 R.id.chipTodo -> loadTrending()
-                else -> searchVideos(categoryQuery(id))
+                else -> {
+                    savePreferredCategory(categoryQuery(id))
+                    searchVideos(categoryQuery(id))
+                }
             }
         }
 
@@ -415,6 +445,7 @@ class MainActivity : AppCompatActivity() {
             if (actionId == EditorInfo.IME_ACTION_SEARCH) {
                 val query = searchInput.text?.toString()?.trim()
                 if (!query.isNullOrEmpty()) {
+                    savePreferredCategory(query)
                     searchVideos(query)
                     searchLayout.visibility = View.GONE
                     searchVisible = false
@@ -427,7 +458,10 @@ class MainActivity : AppCompatActivity() {
             when (item.itemId) {
                 R.id.nav_home -> loadTrending()
                 R.id.nav_trending -> loadTrending()
-                R.id.nav_music -> searchVideos("music")
+                R.id.nav_music -> {
+                    savePreferredCategory("música")
+                    searchVideos("music")
+                }
                 R.id.nav_subs -> loadSubscriptions()
                 R.id.nav_account -> openAccount()
             }
@@ -486,15 +520,26 @@ class MainActivity : AppCompatActivity() {
         }
         isLoading = true
         lifecycleScope.launch {
+            val combined = mutableListOf<com.miappvideos.model.PipedVideo>()
             try {
                 val ytVideos = youTubeManager.getPopularVideos()
                 if (ytVideos.isNotEmpty()) {
-                    adapter.updateVideos(ytVideos.map { it.toPipedVideo() })
-                    isLoading = false
-                    onComplete?.invoke()
-                    return@launch
+                    combined.addAll(ytVideos.map { it.toPipedVideo() })
                 }
             } catch (_: Exception) {}
+
+            try {
+                val result = api.search(preferredQuery())
+                combined.addAll(result.items)
+            } catch (_: Exception) {}
+
+            if (combined.isNotEmpty()) {
+                combined.shuffle()
+                adapter.updateVideos(combined.take(30))
+                isLoading = false
+                onComplete?.invoke()
+                return@launch
+            }
 
             val fallbackQueries = listOf("trending", "music", "viral", "pop", "new")
             val query = fallbackQueries[refreshIndex % fallbackQueries.size]
@@ -690,9 +735,12 @@ class MainActivity : AppCompatActivity() {
         val index = videoQueue.indexOfFirst { extractVideoId(it.url.orEmpty()) == videoId }
         if (index >= 0) {
             currentQueueIndex = index
+            maybeExtendQueue()
         } else {
+            videoQueue.clear()
             videoQueue.add(video)
-            currentQueueIndex = videoQueue.size - 1
+            currentQueueIndex = 0
+            loadSimilarVideos(video)
         }
 
         watchHistory.removeAll { extractVideoId(it.url.orEmpty()) == videoId }
@@ -703,7 +751,7 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val url = com.miappvideos.api.MusicStreamProvider.getAudioStream(videoId)
             if (url != null) {
-                playerManager.playUrl(url)
+                playerManager.playUrl(url, video.title)
                 showMiniPlayer()
             } else {
                 Toast.makeText(this@MainActivity, "No se pudo obtener el audio", Toast.LENGTH_SHORT).show()
@@ -712,6 +760,57 @@ class MainActivity : AppCompatActivity() {
 
         preloadAdjacent()
         refreshQueue()
+    }
+
+    private fun loadSimilarVideos(video: com.miappvideos.model.PipedVideo) {
+        val videoId = extractVideoId(video.url.orEmpty())
+        lifecycleScope.launch {
+            val filtered = findSimilarVideos(video)
+            if (filtered.isNotEmpty() && playerManager.currentVideoId == videoId) {
+                videoQueue.addAll(filtered)
+                refreshQueue()
+                Log.d("Autoplay", "similares cargados: ${filtered.size} para $videoId")
+            }
+        }
+    }
+
+    private suspend fun findSimilarVideos(video: com.miappvideos.model.PipedVideo): List<com.miappvideos.model.PipedVideo> {
+        val videoId = extractVideoId(video.url.orEmpty())
+        val query = listOfNotNull(
+            video.uploaderName?.takeIf { it.isNotBlank() && !it.contains("Topic") },
+            video.title
+        ).joinToString(" ").take(60)
+        val similar = mutableListOf<com.miappvideos.model.PipedVideo>()
+        try {
+            val ytVideos = youTubeManager.searchYouTube(query.ifBlank { "música" }, musicOnly = true)
+            if (ytVideos.isNotEmpty()) {
+                similar.addAll(ytVideos.map { it.toPipedVideo() })
+            }
+        } catch (_: Exception) {}
+        if (similar.isEmpty()) {
+            try {
+                similar.addAll(api.search(query.ifBlank { "música" }).items)
+            } catch (e: Exception) {
+                Log.e("Autoplay", "error similares para $videoId", e)
+            }
+        }
+        val seen = (videoQueue.mapNotNull { extractVideoId(it.url.orEmpty()) } +
+                watchHistory.mapNotNull { extractVideoId(it.url.orEmpty()) }).toSet()
+        return similar.filter {
+            extractVideoId(it.url.orEmpty()).let { id -> id.isNotEmpty() && id != videoId && id !in seen } &&
+                    isMusicVideo(it)
+        }.take(15)
+    }
+
+    private fun isMusicVideo(video: com.miappvideos.model.PipedVideo): Boolean {
+        val text = listOfNotNull(video.title, video.uploaderName)
+            .joinToString(" ").lowercase()
+        val blocked = listOf(
+            "gameplay", "gaming", "brookhaven", "minecraft", "roblox", "free fire",
+            "fortnite", "gta", "videojuego", "videojuegos", "juegos de", "broma",
+            "bromas", "prank", "terror", "comedia", "humor", "reaccion", "vlog"
+        )
+        return blocked.none { it in text }
     }
 
     private fun extractVideoId(url: String): String {
@@ -854,6 +953,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handlePlaybackEnded() {
+        Log.d("Autoplay", "handlePlaybackEnded repeat=$repeatMode queueSize=${videoQueue.size} index=$currentQueueIndex")
         when (repeatMode) {
             2 -> {
                 playerManager.player.seekTo(0)
@@ -864,10 +964,103 @@ class MainActivity : AppCompatActivity() {
                 if (currentQueueIndex < videoQueue.size - 1) {
                     nextVideo()
                 } else {
-                    playerManager.isPlaying = false
+                    autoplayNext()
                 }
             }
         }
+    }
+
+    private fun maybeExtendQueue() {
+        if (extendingQueue) return
+        val remaining = videoQueue.size - currentQueueIndex
+        if (remaining > 5) return
+        extendingQueue = true
+        Log.d("Autoplay", "extendiendo cola: quedan $remaining")
+        lifecycleScope.launch {
+            try {
+                val fresh = searchNewVideos(10)
+                if (fresh.isNotEmpty()) {
+                    videoQueue.addAll(fresh)
+                    refreshQueue()
+                    Log.d("Autoplay", "cola extendida: +${fresh.size} nuevos, total=${videoQueue.size}")
+                } else {
+                    Log.d("Autoplay", "no hay videos nuevos para extender")
+                }
+            } finally {
+                extendingQueue = false
+            }
+        }
+    }
+
+    private suspend fun searchNewVideos(count: Int): List<com.miappvideos.model.PipedVideo> {
+        val last = videoQueue.lastOrNull()
+        val seen = (videoQueue.mapNotNull { extractVideoId(it.url.orEmpty()) } +
+                watchHistory.mapNotNull { extractVideoId(it.url.orEmpty()) }).toSet()
+        val fresh = mutableListOf<com.miappvideos.model.PipedVideo>()
+        if (last != null) {
+            fresh.addAll(findSimilarVideos(last))
+        }
+        if (fresh.size < count) {
+            val fallback = listOfNotNull(
+                preferredQuery().takeIf { it.isNotBlank() },
+                "música"
+            ).first()
+            val fallbackItems = mutableListOf<com.miappvideos.model.PipedVideo>()
+            try {
+                val ytVideos = youTubeManager.searchYouTube(fallback, musicOnly = true)
+                if (ytVideos.isNotEmpty()) {
+                    fallbackItems.addAll(ytVideos.map { it.toPipedVideo() })
+                }
+            } catch (_: Exception) {}
+            if (fallbackItems.isEmpty()) {
+                try {
+                    fallbackItems.addAll(api.search(fallback).items)
+                } catch (e: Exception) {
+                    Log.e("Autoplay", "error fallback extension", e)
+                }
+            }
+            fresh.addAll(fallbackItems.filter {
+                extractVideoId(it.url.orEmpty()).let { id -> id.isNotEmpty() && id !in seen } &&
+                        isMusicVideo(it)
+            }.take(count))
+        }
+        val currentId = extractVideoId(videoQueue.getOrNull(currentQueueIndex)?.url.orEmpty())
+        return fresh.distinctBy { extractVideoId(it.url.orEmpty()) }.filter {
+            extractVideoId(it.url.orEmpty()).let { id -> id.isNotEmpty() && id != currentId && id !in seen } &&
+                    isMusicVideo(it)
+        }.take(count)
+    }
+
+    private fun autoplayNext() {
+        Log.d("Autoplay", "autoplayNext query=${preferredQuery()}")
+        lifecycleScope.launch {
+            try {
+                val fresh = searchNewVideos(10)
+                if (fresh.isNotEmpty()) {
+                    videoQueue.addAll(fresh)
+                    refreshQueue()
+                    currentQueueIndex = videoQueue.size - fresh.size
+                    Log.d("Autoplay", "autoplay: +${fresh.size} nuevos, total=${videoQueue.size}")
+                    playVideo(videoQueue[currentQueueIndex])
+                } else {
+                    Log.d("Autoplay", "no candidate found")
+                    playerManager.isPlaying = false
+                }
+            } catch (e: Exception) {
+                Log.e("Autoplay", "error en autoplay", e)
+                playerManager.isPlaying = false
+            }
+        }
+    }
+
+    private fun preferredQuery(): String {
+        val prefs = getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
+        return prefs.getString("preferred_category", null) ?: autoplayQueries.random()
+    }
+
+    private fun savePreferredCategory(category: String) {
+        getSharedPreferences("user_prefs", Context.MODE_PRIVATE)
+            .edit().putString("preferred_category", category).apply()
     }
 
     private fun playQueueItem(index: Int) {

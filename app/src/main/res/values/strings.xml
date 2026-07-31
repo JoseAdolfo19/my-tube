@@ -7,4 +7,6 @@
     <string name="channel_label">Canal:</string>
     <string name="views_label">Vistas:</string>
     <string name="google_signin_scheme" translatable="false">com.googleusercontent.apps.38145403059-lkn4onppsoqhe6sdlbpufnr9oqd2n22m</string>
+    <string name="channel_name">Reproducción de música</string>
+    <string name="channel_description">Notificación de reproducción de música en segundo plano</string>
 </resources>

@@ -55,9 +55,12 @@ class YouTubeDataManager(private val context: Context) {
         }
     }
 
-    suspend fun searchYouTube(query: String): List<YouTubeVideo> = withContext(Dispatchers.IO) {
+    suspend fun searchYouTube(query: String, musicOnly: Boolean = false): List<YouTubeVideo> = withContext(Dispatchers.IO) {
         try {
-            createApi().search(query = query).items ?: emptyList()
+            createApi().search(
+                query = query,
+                videoCategoryId = if (musicOnly) 10 else null
+            ).items ?: emptyList()
         } catch (e: Exception) {
             emptyList()
         }

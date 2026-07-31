@@ -52,6 +52,7 @@ interface YouTubeApi {
         @Query("q") query: String? = null,
         @Query("channelId") channelId: String? = null,
         @Query("type") type: String = "video",
+        @Query("videoCategoryId") videoCategoryId: Int? = null,
         @Query("maxResults") maxResults: Int = 20
     ): YouTubeVideoResponse
 
