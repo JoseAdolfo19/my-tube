@@ -5,9 +5,31 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
     <path
-        android:fillColor="#FF0000"
-        android:pathData="M0,0h108v108H0z" />
+        android:pathData="M0,0h108v108H0z">
+        <aapt:attr name="android:fillColor" xmlns:aapt="http://schemas.android.com/aapt">
+            <gradient
+                android:type="linear"
+                android:startX="0"
+                android:startY="0"
+                android:endX="108"
+                android:endY="108"
+                android:startColor="#FF3D5E"
+                android:endColor="#7A1FA2" />
+        </aapt:attr>
+    </path>
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M42,33l36,21l-36,21z" />
+        android:pathData="M42,61m-9,0a9,7 0 1 0 18,0a9,7 0 1 0 -18,0" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M51,68v-36h5v36z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M51,32h20v6h-20z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M66,61m-9,0a9,7 0 1 0 18,0a9,7 0 1 0 -18,0" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M75,68v-36h-5v36z" />
 </vector>

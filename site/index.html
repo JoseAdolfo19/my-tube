@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MyTube — Música continua, sin cortes</title>
 <meta name="description" content="MyTube: cliente de YouTube para música. Reproducción continua, solo música, géneros, mini player y segundo plano. Descarga la APK.">
+<link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="img/android-chrome-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="img/android-chrome-512.png">
+<meta name="theme-color" content="#FF3D5E">
 <style>
   :root {
     --bg: #0f1115;
@@ -41,6 +47,7 @@
     background: linear-gradient(135deg, var(--accent), #7a1fa2);
     display: grid; place-items: center; font-weight: 800; font-size: .85rem; color: #fff;
   }
+  .brand img { width: 34px; height: 34px; border-radius: 10px; }
   .nav-links { display: flex; gap: 22px; align-items: center; }
   .nav-links a { color: var(--muted); font-size: .92rem; }
   .nav-links a:hover { color: var(--text); }
@@ -149,7 +156,7 @@
 
 <header>
   <div class="container nav">
-    <a class="brand" href="#"><span class="logo">M</span>MyTube</a>
+    <a class="brand" href="#"><img src="img/favicon-32.png" alt="MyTube">MyTube</a>
     <nav class="nav-links">
       <a href="#features">Características</a>
       <a href="#shots">Capturas</a>
