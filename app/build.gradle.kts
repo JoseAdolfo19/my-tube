@@ -1,6 +1,13 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+}
+
+val localProperties = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
 }
 
 android {
@@ -13,6 +20,17 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
+
+        buildConfigField(
+            "String",
+            "YOUTUBE_API_KEY",
+            "\"${localProperties.getProperty("youtubeApiKey", "")}\""
+        )
+        buildConfigField(
+            "String",
+            "GOOGLE_SIGNIN_CLIENT_ID",
+            "\"${localProperties.getProperty("googleSignInClientId", "")}\""
+        )
     }
 
     buildTypes {
@@ -33,6 +51,7 @@ android {
     }
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 
     packaging {

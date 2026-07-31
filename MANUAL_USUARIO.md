@@ -322,7 +322,7 @@ dependencies {
 </manifest>
 ```
 
-**Vinculado con:** `MiAppVideosApplication` (inicializa NewPipe), `MainActivity` (launcher + PiP), `LoginActivity` (deep link `com.googleusercontent.apps.38145403059-lkn4onppsoqhe6sdlbpufnr9oqd2n22m://` del OAuth) y `PlayerService` (servicio foreground de tipo mediaPlayback). El `launchMode=singleTop` evita apilar MainActivity al volver desde el login.
+**Vinculado con:** `MiAppVideosApplication` (inicializa NewPipe), `MainActivity` (launcher + PiP), `LoginActivity` (deep link `com.googleusercontent.apps.XXXX-...://` del OAuth) y `PlayerService` (servicio foreground de tipo mediaPlayback). El `launchMode=singleTop` evita apilar MainActivity al volver desde el login.
 
 ---
 
@@ -1679,7 +1679,7 @@ interface YouTubeApi {
 }
 ```
 
-**Vinculado con:** `YouTubeDataManager` (único usuario), `YouTubeModels.kt`, y la API key `youtube_api_key` de `strings.xml`.
+**Vinculado con:** `YouTubeDataManager` (único usuario), `YouTubeModels.kt`, y la API key de YouTube Data API inyectada por `BuildConfig` desde `local.properties` (ver sección 7).
 
 ---
 
@@ -1701,7 +1701,7 @@ class YouTubeDataManager(private val context: Context) {
     private var accessToken: String? = null
 
     private val apiKey: String
-        get() = context.getString(com.miappvideos.R.string.youtube_api_key)
+        get() = BuildConfig.YOUTUBE_API_KEY
 
     fun setAccessToken(token: String?) {
         accessToken = token
@@ -2613,7 +2613,7 @@ class LoginActivity : AppCompatActivity() {
             .requestEmail()
             .requestProfile()
             .requestScopes(com.google.android.gms.common.api.Scope("https://www.googleapis.com/auth/youtube.readonly"))
-            .requestIdToken(getString(R.string.google_signin_client_id))
+            .requestIdToken(BuildConfig.GOOGLE_SIGNIN_CLIENT_ID)
             .build()
 
         googleSignInClient = GoogleSignIn.getClient(this, gso)
@@ -4010,13 +4010,11 @@ class PlaylistAdapter(
     <string name="error_loading">Error al cargar videos</string>
     <string name="channel_label">Canal:</string>
     <string name="views_label">Vistas:</string>
-    <string name="google_signin_scheme" translatable="false">com.googleusercontent.apps.38145403059-lkn4onppsoqhe6sdlbpufnr9oqd2n22m</string>
-    <string name="youtube_api_key" translatable="false">AIzaSyAvAFo6fXIzJto1RkejUWg-BJHKon2qZNo</string>
-    <string name="google_signin_client_id" translatable="false">38145403059-lkn4onppsoqhe6sdlbpufnr9oqd2n22m.apps.googleusercontent.com</string>
+    <string name="google_signin_scheme" translatable="false">com.googleusercontent.apps.XXXX-XXXXXXXXXXXXXXXXXXXXXXXX</string>
 </resources>
 ```
 
-**Vinculado con:** `YouTubeDataManager` (API key), `LoginActivity` (client ID + scheme), `AndroidManifest.xml` (scheme del deep link OAuth).
+**Vinculado con:** `LoginActivity` (client ID vía `BuildConfig`), `AndroidManifest.xml` (scheme del deep link OAuth).
 
 ---
 
@@ -4171,12 +4169,12 @@ class PlaylistAdapter(
 |---|---|---|
 | Proyecto Google Cloud | `prefab-isotope-504100-n4` | Consola GCP |
 | YouTube Data API v3 | Habilitada | Consola GCP |
-| API key (Data API) | `AIzaSyAvAFo6fXIzJto1RkejUWg-BJHKon2qZNo` | `strings.xml` |
-| Cliente OAuth web | `38145403059-lkn4onppsoqhe6sdlbpufnr9oqd2n22m` | `strings.xml` |
-| Scheme OAuth | `com.googleusercontent.apps.38145403059-...n22m` | `strings.xml` + manifest |
-| SHA-1 firma | `93:9A:8C:BA:DE:AB:09:7A:17:F4:F9:1E:3F:2C:7D:C8:C5:9B:45:E3` | Consola GCP |
+| API key (Data API) | `[REDACTADO]` — NO versionar | `local.properties` → `BuildConfig.YOUTUBE_API_KEY` |
+| Cliente OAuth (Android) | `[REDACTADO]` — NO versionar | `local.properties` → `BuildConfig.GOOGLE_SIGNIN_CLIENT_ID` |
+| Scheme OAuth | `com.googleusercontent.apps.XXXX-...` | `strings.xml` + manifest (obligatorio en build) |
+| SHA-1 firma | `[REDACTADO]` | Solo Consola GCP (nunca publicar) |
 | Scope | `https://www.googleapis.com/auth/youtube.readonly` | LoginActivity |
-| API key InnerTube | `AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8` | ClientProfiles |
+| API key InnerTube | `AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8` | ClientProfiles (clave pública compartida, no es secreto) |
 | Perfil activo | IOS `21.03.1` (www.youtube.com) | ClientProfiles |
 | Instancia Piped | `https://pipedapi.kavin.rocks/` (caída) | PipedApi |
 

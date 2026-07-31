@@ -1,6 +1,7 @@
 package com.miappvideos.api
 
 import android.content.Context
+import com.miappvideos.BuildConfig
 import com.miappvideos.model.YouTubeSubscription
 import com.miappvideos.model.YouTubeVideo
 import kotlinx.coroutines.Dispatchers
@@ -11,7 +12,7 @@ class YouTubeDataManager(private val context: Context) {
     private var accessToken: String? = null
 
     private val apiKey: String
-        get() = context.getString(com.miappvideos.R.string.youtube_api_key)
+        get() = BuildConfig.YOUTUBE_API_KEY
 
     fun setAccessToken(token: String?) {
         accessToken = token

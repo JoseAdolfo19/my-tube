@@ -9,6 +9,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
+import com.miappvideos.BuildConfig
 import com.miappvideos.MainActivity
 import com.miappvideos.R
 
@@ -25,7 +26,7 @@ class LoginActivity : AppCompatActivity() {
             .requestEmail()
             .requestProfile()
             .requestScopes(com.google.android.gms.common.api.Scope("https://www.googleapis.com/auth/youtube.readonly"))
-            .requestIdToken(getString(R.string.google_signin_client_id))
+            .requestIdToken(BuildConfig.GOOGLE_SIGNIN_CLIENT_ID)
             .build()
 
         googleSignInClient = GoogleSignIn.getClient(this, gso)
