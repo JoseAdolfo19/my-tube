@@ -786,32 +786,91 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun normalizeSongTitle(title: String): String {
+        var t = title.lowercase()
+        t = t.replace("á", "a").replace("é", "e").replace("í", "i")
+            .replace("ó", "o").replace("ú", "u").replace("ü", "u").replace("ñ", "n")
+        t = t.replace(Regex("\\([^)]*\\)|\\[[^\\]]*\\]"), " ")
+        t = t.replace(Regex("\\|"), " - ")
+        t = t.replace(Regex("\\b(letra|lyrics|lyric|official video|video oficial|official|hd|4k|audio|video|live|concierto|sesion|en vivo|musical)\\b"), " ")
+        t = t.replace(Regex("[-–—]"), " ")
+        t = t.replace(Regex("[^a-z0-9 ]"), " ")
+        return t.replace(Regex("\\s+"), " ").trim()
+    }
+
+    private fun sameSong(a: String, b: String): Boolean {
+        val na = normalizeSongTitle(a)
+        val nb = normalizeSongTitle(b)
+        if (na.isEmpty() || nb.isEmpty()) return false
+        if (na == nb) return true
+        val short = if (na.length <= nb.length) na else nb
+        val long = if (na.length <= nb.length) nb else na
+        return short.length >= 5 && long.contains(short)
+    }
+
+    private fun isLyricsChannel(channel: String?): Boolean {
+        val c = channel?.lowercase() ?: return false
+        val lyrics = listOf(
+            "keller mx", "vibe music", "latinhype", "lowdrow", "jostland", "latin union",
+            "rebel waves", "rap samurai", "sunday", "music lyrics", "un video para ti",
+            "letra", "lyrics", "lyric", "traduccion", "sub español"
+        )
+        return lyrics.any { it in c }
+    }
+
+    private fun similarScore(video: com.miappvideos.model.PipedVideo): Int {
+        var score = 0
+        val title = video.title.orEmpty().lowercase()
+        val channel = video.uploaderName.orEmpty()
+        if ("vevo" in channel.lowercase() || "topic" in channel.lowercase() || "official video" in title || "video oficial" in title) score += 2
+        if ("letra" in title || "lyrics" in title || "lyric" in title) score -= 2
+        if (isLyricsChannel(video.uploaderName)) score -= 2
+        return score
+    }
+
     private suspend fun findSimilarVideos(video: com.miappvideos.model.PipedVideo): List<com.miappvideos.model.PipedVideo> {
         val videoId = extractVideoId(video.url.orEmpty())
-        val query = listOfNotNull(
-            video.uploaderName?.takeIf { it.isNotBlank() && !it.contains("Topic") },
-            video.title
-        ).joinToString(" ").take(60)
+        val artist = video.uploaderName?.takeIf { it.isNotBlank() && !it.contains("Topic", true) } ?: ""
+        val seen = (videoQueue.mapNotNull { extractVideoId(it.url.orEmpty()) } +
+                watchHistory.mapNotNull { extractVideoId(it.url.orEmpty()) }).toSet()
         val similar = mutableListOf<com.miappvideos.model.PipedVideo>()
-        try {
-            val ytVideos = youTubeManager.searchYouTube(query.ifBlank { "música" }, musicOnly = true)
-            if (ytVideos.isNotEmpty()) {
-                similar.addAll(ytVideos.map { it.toPipedVideo() })
+
+        fun collect(results: List<com.miappvideos.model.PipedVideo>) {
+            for (v in results) {
+                val id = extractVideoId(v.url.orEmpty())
+                if (id.isEmpty() || id == videoId || id in seen) continue
+                if (!isMusicVideo(v)) continue
+                if (sameSong(v.title.orEmpty(), video.title.orEmpty())) continue
+                if (similar.any { sameSong(it.title.orEmpty(), v.title.orEmpty()) }) continue
+                similar.add(v)
             }
+        }
+
+        val baseQuery = listOfNotNull(artist, video.title).joinToString(" ").take(60)
+        try {
+            collect(youTubeManager.searchYouTube(baseQuery.ifBlank { "música" }, musicOnly = true).map { it.toPipedVideo() })
         } catch (_: Exception) {}
         if (similar.isEmpty()) {
             try {
-                similar.addAll(api.search(query.ifBlank { "música" }).items)
+                collect(api.search(baseQuery.ifBlank { "música" }).items)
             } catch (e: Exception) {
                 Log.e("Autoplay", "error similares para $videoId", e)
             }
         }
-        val seen = (videoQueue.mapNotNull { extractVideoId(it.url.orEmpty()) } +
-                watchHistory.mapNotNull { extractVideoId(it.url.orEmpty()) }).toSet()
-        return similar.filter {
-            extractVideoId(it.url.orEmpty()).let { id -> id.isNotEmpty() && id != videoId && id !in seen } &&
-                    isMusicVideo(it)
-        }.take(15)
+        if (similar.size < 8 && artist.isNotBlank()) {
+            val artistQuery = "$artist música"
+            try {
+                collect(youTubeManager.searchYouTube(artistQuery, musicOnly = true).map { it.toPipedVideo() })
+            } catch (_: Exception) {}
+            if (similar.size < 8) {
+                try {
+                    collect(api.search(artistQuery).items)
+                } catch (e: Exception) {
+                    Log.e("Autoplay", "error similares artista para $videoId", e)
+                }
+            }
+        }
+        return similar.sortedByDescending { similarScore(it) }.take(15)
     }
 
     private fun isMusicVideo(video: com.miappvideos.model.PipedVideo): Boolean {
@@ -1036,13 +1095,15 @@ class MainActivity : AppCompatActivity() {
             fresh.addAll(fallbackItems.filter {
                 extractVideoId(it.url.orEmpty()).let { id -> id.isNotEmpty() && id !in seen } &&
                         isMusicVideo(it)
+            }.filter { v ->
+                fresh.none { f -> sameSong(f.title.orEmpty(), v.title.orEmpty()) }
             }.take(count))
         }
         val currentId = extractVideoId(videoQueue.getOrNull(currentQueueIndex)?.url.orEmpty())
         return fresh.distinctBy { extractVideoId(it.url.orEmpty()) }.filter {
             extractVideoId(it.url.orEmpty()).let { id -> id.isNotEmpty() && id != currentId && id !in seen } &&
                     isMusicVideo(it)
-        }.take(count)
+        }.sortedByDescending { similarScore(it) }.take(count)
     }
 
     private fun autoplayNext() {
