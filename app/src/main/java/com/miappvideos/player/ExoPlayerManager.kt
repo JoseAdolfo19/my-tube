@@ -3,12 +3,25 @@ package com.miappvideos.player
 import android.content.Context
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import com.miappvideos.api.innertube.RotatingHttpClient
 
 class ExoPlayerManager(context: Context) {
 
+    private val dataSourceFactory = object : DataSource.Factory {
+        override fun createDataSource(): DataSource =
+            RangeFixingDataSource(
+                OkHttpDataSource.Factory(RotatingHttpClient.client()).createDataSource()
+            )
+    }
+
     val player: ExoPlayer = ExoPlayer.Builder(context)
         .setHandleAudioBecomingNoisy(true)
+        .setMediaSourceFactory(
+            androidx.media3.exoplayer.source.DefaultMediaSourceFactory(dataSourceFactory)
+        )
         .build()
 
     var isPlaying: Boolean

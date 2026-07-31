@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.util.Rational
 import android.view.GestureDetector
 import android.view.MotionEvent
@@ -207,6 +208,19 @@ class MainActivity : AppCompatActivity() {
                 } else if (playbackState == Player.STATE_ENDED) {
                     handlePlaybackEnded()
                 }
+            }
+
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                val sb = StringBuilder("Playback error: ${error.message}\n")
+                var cause: Throwable? = error
+                while (cause != null) {
+                    sb.append("  Caused by: ${cause.javaClass.simpleName}: ${cause.message}\n")
+                    if (cause is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException) {
+                        cause.responseBody?.let { sb.append("  RESPONSE BODY: ${String(it)}\n") }
+                    }
+                    cause = cause.cause
+                }
+                Log.d("PlayerError", sb.toString())
             }
         })
 
@@ -548,7 +562,9 @@ class MainActivity : AppCompatActivity() {
             if (unique.isEmpty()) {
                 Toast.makeText(this@MainActivity, "No se pudieron cargar videos de tus suscripciones", Toast.LENGTH_SHORT).show()
             } else {
-                val pipedVideos = unique.values.map { it.toPipedVideo() }
+                val pipedVideos = unique.values
+                    .sortedByDescending { it.snippet?.publishedAt ?: "" }
+                    .map { it.toPipedVideo() }
                 adapter.updateVideos(pipedVideos)
                 Toast.makeText(this@MainActivity, "${pipedVideos.size} videos de tus suscripciones", Toast.LENGTH_SHORT).show()
             }
@@ -685,19 +701,12 @@ class MainActivity : AppCompatActivity() {
         saveWatchHistory()
 
         lifecycleScope.launch {
-            val streams = com.miappvideos.api.StreamProvider.getStreams(videoId)
-            if (streams != null) {
-                val audioUrl = playerManager.getAudioUrl(streams.audioStreams)
-                val videoUrl = playerManager.getVideoUrl(streams.videoStreams)
-                val url = videoUrl ?: audioUrl
-                if (url != null) {
-                    playerManager.playUrl(url)
-                    showMiniPlayer()
-                } else {
-                    Toast.makeText(this@MainActivity, "No se pudo obtener el stream", Toast.LENGTH_SHORT).show()
-                }
+            val url = com.miappvideos.api.MusicStreamProvider.getAudioStream(videoId)
+            if (url != null) {
+                playerManager.playUrl(url)
+                showMiniPlayer()
             } else {
-                Toast.makeText(this@MainActivity, "Error: no hay instancias disponibles", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@MainActivity, "No se pudo obtener el audio", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -916,11 +925,11 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             if (next < videoQueue.size) {
                 val nextId = extractVideoId(videoQueue[next].url.orEmpty())
-                if (nextId.isNotEmpty()) com.miappvideos.api.StreamProvider.preload(nextId)
+                if (nextId.isNotEmpty()) com.miappvideos.api.MusicStreamProvider.preload(nextId)
             }
             if (prev >= 0) {
                 val prevId = extractVideoId(videoQueue[prev].url.orEmpty())
-                if (prevId.isNotEmpty()) com.miappvideos.api.StreamProvider.preload(prevId)
+                if (prevId.isNotEmpty()) com.miappvideos.api.MusicStreamProvider.preload(prevId)
             }
         }
     }

@@ -58,10 +58,10 @@ class PlayerService : MediaSessionService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Reproducción en segundo plano",
+                "Reproducción de música en segundo plano",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Notificación para reproducción de video en segundo plano"
+                description = "Notificación para reproducción de música en segundo plano"
                 setShowBadge(false)
             }
             val manager = getSystemService(NotificationManager::class.java)
@@ -80,7 +80,7 @@ class PlayerService : MediaSessionService() {
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(title)
-            .setContentText("Reproduciendo en segundo plano")
+            .setContentText("Reproduciendo música en segundo plano")
             .setSmallIcon(com.miappvideos.R.drawable.ic_play_arrow)
             .setContentIntent(openPendingIntent)
             .setOngoing(true)
