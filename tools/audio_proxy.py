@@ -22,6 +22,7 @@ import urllib.request
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 URL_TTL_SECONDS = 4 * 3600
 PROBE_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+PROXY_KEY = os.environ.get("PROXY_KEY", "")
 
 url_cache = {}
 url_locks = {}
@@ -142,6 +143,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
         query = urllib.parse.parse_qs(parsed.query)
         if parsed.path != "/audio":
             return None
+        if PROXY_KEY and (query.get("key") or [""])[0] != PROXY_KEY:
+            self.send_error_json(401, "key invalida")
+            return None
         video_id = (query.get("v") or [""])[0]
         if not re.fullmatch(r"[A-Za-z0-9_-]{11}", video_id):
             return None
@@ -181,7 +185,7 @@ class ThreadingHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
 
 
 if __name__ == "__main__":
-    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8080
+    port = int(os.environ.get("PORT") or (sys.argv[1] if len(sys.argv) > 1 else 8080))
     server = ThreadingHTTPServer(("0.0.0.0", port), Handler)
     log(f"audio proxy en 0.0.0.0:{port}")
     server.serve_forever()

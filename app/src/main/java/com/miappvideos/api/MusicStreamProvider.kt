@@ -32,6 +32,8 @@ object MusicStreamProvider {
     private const val JSON_TYPE = "application/json; charset=utf-8"
     private const val PROXY_LAN = "http://192.168.187.240:8080"
     private const val PROXY_USB = "http://127.0.0.1:8080"
+    private const val PROXY_PUBLIC = "https://mytube-proxy.onrender.com"
+    private const val PROXY_KEY = ""
 
     private val probeClient = OkHttpClient.Builder()
         .connectTimeout(1500, TimeUnit.MILLISECONDS)
@@ -51,16 +53,17 @@ object MusicStreamProvider {
     }
 
     private fun fetchFromProxy(videoId: String): String? {
-        for (base in listOf(PROXY_LAN, PROXY_USB)) {
+        for (base in listOf(PROXY_LAN, PROXY_USB, PROXY_PUBLIC)) {
             try {
+                val url = "$base/audio?v=$videoId" + if (PROXY_KEY.isNotEmpty()) "&key=$PROXY_KEY" else ""
                 val probe = Request.Builder()
-                    .url("$base/audio?v=$videoId")
+                    .url(url)
                     .head()
                     .build()
                 probeClient.newCall(probe).execute().use { response ->
                     if (response.isSuccessful) {
                         Log.d(TAG, "Proxy OK ($base) para $videoId")
-                        return "$base/audio?v=$videoId"
+                        return url
                     }
                 }
             } catch (e: Exception) {
