@@ -32,8 +32,8 @@ object MusicStreamProvider {
     private const val JSON_TYPE = "application/json; charset=utf-8"
     private const val PROXY_LAN = "http://192.168.187.240:8080"
     private const val PROXY_USB = "http://127.0.0.1:8080"
-    private const val PROXY_PUBLIC = "https://mytube-proxy.onrender.com"
-    private const val PROXY_KEY = ""
+    private const val PROXY_PUBLIC = "https://mytube-proxy-q284.onrender.com"
+    private const val PROXY_KEY = "mytube-2026-proxy"
 
     private val probeClient = OkHttpClient.Builder()
         .connectTimeout(1500, TimeUnit.MILLISECONDS)
