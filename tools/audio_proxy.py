@@ -55,7 +55,7 @@ def resolve_url(video_id):
             return None
         url = result.stdout.strip().splitlines()[-1] if result.stdout.strip() else None
         if result.returncode != 0 or not url:
-            log(f"yt-dlp fallo {video_id}: {result.stderr[-300:]}")
+            log(f"yt-dlp fallo {video_id}: {result.stderr[-2000:]}")
             return None
         url_cache[video_id] = (url, time.time() + URL_TTL_SECONDS)
         log(f"ok {video_id} (len={len(url)})")
