@@ -37,6 +37,7 @@ interface YouTubeApi {
         @Query("part") part: String = "snippet",
         @Query("chart") chart: String = "mostPopular",
         @Query("regionCode") regionCode: String = "MX",
+        @Query("videoCategoryId") videoCategoryId: Int? = null,
         @Query("maxResults") maxResults: Int = 20
     ): YouTubeVideoResponse
 

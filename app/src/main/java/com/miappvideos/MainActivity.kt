@@ -511,13 +511,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun categoryQuery(id: Int): String = when (id) {
-        R.id.chipMusica -> "música"
-        R.id.chipMixes -> "mixes"
-        R.id.chipVideojuegos -> "videojuegos"
-        R.id.chipNoticias -> "noticias"
-        R.id.chipDeportes -> "deportes"
-        R.id.chipComedia -> "comedia"
-        R.id.chipEducacion -> "educación"
+        R.id.chipTodo -> "música"
+        R.id.chipPop -> "pop"
+        R.id.chipReggaeton -> "reggaetón"
+        R.id.chipSalsa -> "salsa"
+        R.id.chipCumbia -> "cumbia"
+        R.id.chipRock -> "rock en español"
+        R.id.chipBachata -> "bachata"
+        R.id.chipBaladas -> "baladas románticas"
+        R.id.chipVallenato -> "vallenato"
+        R.id.chipElectronica -> "música electrónica"
+        R.id.chipCorridos -> "corridos"
         else -> "música"
     }
 
@@ -556,8 +560,8 @@ class MainActivity : AppCompatActivity() {
             } catch (_: Exception) {}
 
             try {
-                val result = api.search(preferredQuery())
-                combined.addAll(result.items)
+                val result = api.search("${preferredQuery()} música")
+                combined.addAll(result.items.filter { isMusicVideo(it) })
             } catch (_: Exception) {}
 
             if (combined.isNotEmpty()) {
@@ -568,13 +572,13 @@ class MainActivity : AppCompatActivity() {
                 return@launch
             }
 
-            val fallbackQueries = listOf("trending", "music", "viral", "pop", "new")
+            val fallbackQueries = listOf("música pop", "música salsa", "música cumbia", "música romántica", "música reggaetón")
             val query = fallbackQueries[refreshIndex % fallbackQueries.size]
             refreshIndex++
             try {
                 val result = api.search(query)
                 if (result.items.isNotEmpty()) {
-                    adapter.updateVideos(result.items.take(20))
+                    adapter.updateVideos(result.items.filter { isMusicVideo(it) }.take(20))
                     isLoading = false
                     onComplete?.invoke()
                     return@launch
@@ -588,8 +592,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun searchVideos(query: String) {
         lifecycleScope.launch {
+            val musicQuery = listOfNotNull(query.takeIf { it.isNotBlank() }, "música")
+                .joinToString(" ")
             try {
-                val ytVideos = youTubeManager.searchYouTube(query)
+                val ytVideos = youTubeManager.searchYouTube(musicQuery, musicOnly = true)
                 if (ytVideos.isNotEmpty()) {
                     adapter.updateVideos(ytVideos.map { it.toPipedVideo() })
                     return@launch
@@ -597,7 +603,7 @@ class MainActivity : AppCompatActivity() {
             } catch (_: Exception) {}
 
             try {
-                val result = api.search(query)
+                val result = api.search(musicQuery)
                 adapter.updateVideos(result.items.take(30))
             } catch (e: Exception) {
                 Toast.makeText(this@MainActivity, "Error al buscar", Toast.LENGTH_SHORT).show()

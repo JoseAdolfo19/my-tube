@@ -49,7 +49,7 @@ class YouTubeDataManager(private val context: Context) {
 
     suspend fun getPopularVideos(region: String = "MX"): List<YouTubeVideo> = withContext(Dispatchers.IO) {
         try {
-            createApi().getVideos(regionCode = region).items ?: emptyList()
+            createApi().getVideos(regionCode = region, videoCategoryId = 10).items ?: emptyList()
         } catch (e: Exception) {
             emptyList()
         }

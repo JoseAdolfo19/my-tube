@@ -97,57 +97,78 @@
                 style="@style/Widget.MaterialComponents.Chip.Filter"
                 android:layout_width="wrap_content"
                 android:layout_height="36dp"
-                android:text="Todo"
+                android:text="Música"
                 android:checked="true" />
 
             <com.google.android.material.chip.Chip
-                android:id="@+id/chipMusica"
+                android:id="@+id/chipPop"
                 style="@style/Widget.MaterialComponents.Chip.Filter"
                 android:layout_width="wrap_content"
                 android:layout_height="36dp"
-                android:text="Música" />
+                android:text="Pop" />
 
             <com.google.android.material.chip.Chip
-                android:id="@+id/chipMixes"
+                android:id="@+id/chipReggaeton"
                 style="@style/Widget.MaterialComponents.Chip.Filter"
                 android:layout_width="wrap_content"
                 android:layout_height="36dp"
-                android:text="Mixes" />
+                android:text="Reggaetón" />
 
             <com.google.android.material.chip.Chip
-                android:id="@+id/chipVideojuegos"
+                android:id="@+id/chipSalsa"
                 style="@style/Widget.MaterialComponents.Chip.Filter"
                 android:layout_width="wrap_content"
                 android:layout_height="36dp"
-                android:text="Videojuegos" />
+                android:text="Salsa" />
 
             <com.google.android.material.chip.Chip
-                android:id="@+id/chipNoticias"
+                android:id="@+id/chipCumbia"
                 style="@style/Widget.MaterialComponents.Chip.Filter"
                 android:layout_width="wrap_content"
                 android:layout_height="36dp"
-                android:text="Noticias" />
+                android:text="Cumbia" />
 
             <com.google.android.material.chip.Chip
-                android:id="@+id/chipDeportes"
+                android:id="@+id/chipRock"
                 style="@style/Widget.MaterialComponents.Chip.Filter"
                 android:layout_width="wrap_content"
                 android:layout_height="36dp"
-                android:text="Deportes" />
+                android:text="Rock" />
 
             <com.google.android.material.chip.Chip
-                android:id="@+id/chipComedia"
+                android:id="@+id/chipBachata"
                 style="@style/Widget.MaterialComponents.Chip.Filter"
                 android:layout_width="wrap_content"
                 android:layout_height="36dp"
-                android:text="Comedia" />
+                android:text="Bachata" />
 
             <com.google.android.material.chip.Chip
-                android:id="@+id/chipEducacion"
+                android:id="@+id/chipBaladas"
                 style="@style/Widget.MaterialComponents.Chip.Filter"
                 android:layout_width="wrap_content"
                 android:layout_height="36dp"
-                android:text="Educación" />
+                android:text="Baladas" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipVallenato"
+                style="@style/Widget.MaterialComponents.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="Vallenato" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipElectronica"
+                style="@style/Widget.MaterialComponents.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="Electrónica" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipCorridos"
+                style="@style/Widget.MaterialComponents.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="Corridos" />
 
         </com.google.android.material.chip.ChipGroup>
 
