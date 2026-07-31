@@ -43,7 +43,7 @@ def resolve_url(video_id):
             "-g", "-f", "best[height<=720][ext=mp4]/best[ext=mp4]/bestaudio/best",
             "--no-playlist",
             "--no-warnings",
-            "--extractor-args", "youtube:player_client=android_music,android,tv,web_embedded,web_safari",
+            "--extractor-args", "youtube:player_client=web_safari,web_embedded,tv,web",
             f"https://www.youtube.com/watch?v={video_id}",
         ]
         log(f"resolviendo {video_id} ...")
@@ -187,7 +187,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             cmd = [
                 sys.executable, "-m", "yt_dlp", "-v",
                 "-f", "bestaudio", "--no-playlist", "--no-warnings", "-g",
-                "--extractor-args", "youtube:player_client=android_music,web_safari",
+                "--extractor-args", "youtube:player_client=web_safari,web_embedded",
                 f"https://www.youtube.com/watch?v={video_id}",
             ]
             try:
