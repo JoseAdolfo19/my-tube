@@ -159,6 +159,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        bottomNavigation.visibility = View.VISIBLE
         loadTrending()
     }
 
@@ -756,6 +757,7 @@ class MainActivity : AppCompatActivity() {
             val url = com.miappvideos.api.MusicStreamProvider.getAudioStream(videoId)
             if (url != null) {
                 playerManager.playUrl(url, video.title)
+                startBackgroundPlayback(showToast = false)
                 showMiniPlayer()
             } else {
                 Toast.makeText(this@MainActivity, "No se pudo obtener el audio", Toast.LENGTH_SHORT).show()
@@ -876,7 +878,7 @@ class MainActivity : AppCompatActivity() {
         prefs.edit().putString("history_json", arr.toString()).apply()
     }
 
-    private fun startBackgroundPlayback() {
+    private fun startBackgroundPlayback(showToast: Boolean = true) {
         isBackgroundMode = true
         val intent = Intent(this, PlayerService::class.java).apply {
             putExtra("video_id", playerManager.currentVideoId)
@@ -887,7 +889,9 @@ class MainActivity : AppCompatActivity() {
         } else {
             startService(intent)
         }
-        Toast.makeText(this, "Reproduciendo en segundo plano", Toast.LENGTH_SHORT).show()
+        if (showToast) {
+            Toast.makeText(this, "Reproduciendo en segundo plano", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun enterPipMode() {
@@ -1177,7 +1181,20 @@ class MainActivity : AppCompatActivity() {
     override fun onStop() {
         super.onStop()
         if (!isInPipMode && !isBackgroundMode) {
-            playerManager.player.pause()
+            if (!playerManager.player.isPlaying) {
+                playerManager.player.pause()
+            }
+        }
+        if (!isInPipMode) {
+            bottomNavigation.visibility = View.GONE
+        }
+    }
+
+    override fun onBackPressed() {
+        if (isExpanded) {
+            leavePlaybackScreen()
+        } else {
+            super.onBackPressed()
         }
     }
 
