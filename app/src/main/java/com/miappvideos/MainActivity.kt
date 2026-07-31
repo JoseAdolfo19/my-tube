@@ -39,6 +39,7 @@ import com.miappvideos.api.PipedApi
 import com.miappvideos.api.YouTubeDataManager
 import com.miappvideos.model.PipedVideo
 import com.miappvideos.model.YouTubeVideo
+import com.miappvideos.util.toPipedVideo
 import com.miappvideos.player.ExoPlayerHolder
 import com.miappvideos.player.ExoPlayerManager
 import com.miappvideos.player.PlayerService
@@ -115,6 +116,7 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val RC_LOGIN = 9002
+        private const val RC_SEARCH = 9003
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -158,6 +160,30 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         loadTrending()
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == RC_SEARCH && resultCode == RESULT_OK && data != null) {
+            val url = data.getStringExtra(SearchActivity.EXTRA_URL)
+            val title = data.getStringExtra(SearchActivity.EXTRA_TITLE)
+            if (!url.isNullOrEmpty() && !title.isNullOrEmpty()) {
+                playVideo(
+                    com.miappvideos.model.PipedVideo(
+                        url = url,
+                        title = title,
+                        thumbnail = data.getStringExtra(SearchActivity.EXTRA_THUMB),
+                        uploaderName = data.getStringExtra(SearchActivity.EXTRA_UPLOADER),
+                        uploaderAvatar = null,
+                        uploadedDate = null,
+                        shortDescription = null,
+                        duration = null,
+                        views = null,
+                        uploaderVerified = null
+                    )
+                )
+            }
+        }
     }
 
     private fun applySavedTheme() {
@@ -415,7 +441,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnSearch.setOnClickListener {
-            toggleSearch()
+            startActivityForResult(Intent(this, SearchActivity::class.java), RC_SEARCH)
         }
 
         btnMenu.setOnClickListener {
@@ -688,28 +714,6 @@ class MainActivity : AppCompatActivity() {
         youTubeManager.setAccessToken(null)
         loadAvatar()
         Toast.makeText(this, "Sesión cerrada", Toast.LENGTH_SHORT).show()
-    }
-
-    private fun com.miappvideos.model.YouTubeVideo.toPipedVideo(): PipedVideo {
-        val videoId = when {
-            id?.isJsonObject == true -> id.asJsonObject.get("videoId")?.asString
-            id?.isJsonPrimitive == true && id.asString.length == 11 -> id.asString
-            else -> null
-        } ?: snippet?.resourceId?.videoId ?: snippet?.title?.hashCode()?.toString() ?: ""
-        val thumb = snippet?.thumbnails?.medium?.url ?: snippet?.thumbnails?.high?.url
-        return PipedVideo(
-            url = "https://www.youtube.com/watch?v=$videoId",
-            title = snippet?.title ?: "Sin título",
-            thumbnail = thumb,
-            uploaderName = snippet?.channelTitle,
-            uploaderAvatar = null,
-            uploadedDate = snippet?.publishedAt,
-            shortDescription = null,
-            duration = null,
-            views = null,
-            uploaderVerified = null,
-            channelId = snippet?.channelId
-        )
     }
 
     private fun playVideo(video: com.miappvideos.model.PipedVideo) {

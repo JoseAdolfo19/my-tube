@@ -35,14 +35,18 @@
         <activity
             android:name=".auth.LoginActivity"
             android:exported="true"
-            android:theme="@style/Theme.MiAppVideos">
-            <intent-filter>
+            android:theme="@style/Theme.MiAppVideos">            <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="@string/google_signin_scheme" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".SearchActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MiAppVideos" />
 
         <service
             android:name=".player.PlayerService"

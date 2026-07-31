@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="?attr/colorSurface">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="4dp"
+        android:paddingVertical="6dp">
+
+        <ImageButton
+            android:id="@+id/btnBack"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_arrow_back"
+            android:tint="?attr/colorOnSurface"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Volver" />
+
+        <EditText
+            android:id="@+id/searchInput"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Buscar en YouTube"
+            android:imeOptions="actionSearch"
+            android:inputType="text"
+            android:maxLines="1"
+            android:textColor="?attr/colorOnSurface"
+            android:textColorHint="?attr/colorOnSurfaceVariant"
+            android:textSize="16sp" />
+
+        <ImageButton
+            android:id="@+id/btnClearInput"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_close"
+            android:tint="?attr/colorOnSurfaceVariant"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Limpiar" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#E0E0E0" />
+
+    <LinearLayout
+        android:id="@+id/historyHeader"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="10dp">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Historial"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/btnClearAll"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Borrar todo"
+            android:textColor="#FF0000"
+            android:textSize="13sp"
+            android:padding="6dp" />
+    </LinearLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/historyRecycler"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:paddingBottom="80dp" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/resultsRecycler"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:visibility="gone"
+        android:clipToPadding="false"
+        android:paddingBottom="80dp" />
+
+    <TextView
+        android:id="@+id/emptyView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:text="Sin búsquedas recientes"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:textSize="15sp"
+        android:visibility="gone" />
+
+</LinearLayout>
