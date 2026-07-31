@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MyTube — Música continua, sin cortes</title>
+<meta name="description" content="MyTube: cliente de YouTube para música. Reproducción continua, solo música, géneros, mini player y segundo plano. Descarga la APK.">
+<style>
+  :root {
+    --bg: #0f1115;
+    --bg2: #16181d;
+    --card: #1c1f26;
+    --border: #2a2e37;
+    --text: #f1f3f5;
+    --muted: #9aa3af;
+    --accent: #ff3d5e;
+    --accent2: #ff6b8a;
+    --radius: 16px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.6;
+  }
+  a { color: var(--accent2); text-decoration: none; }
+  .container { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(15,17,21,.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.15rem; color: var(--text); }
+  .logo {
+    width: 34px; height: 34px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), #7a1fa2);
+    display: grid; place-items: center; font-weight: 800; font-size: .85rem; color: #fff;
+  }
+  .nav-links { display: flex; gap: 22px; align-items: center; }
+  .nav-links a { color: var(--muted); font-size: .92rem; }
+  .nav-links a:hover { color: var(--text); }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff !important; font-weight: 600;
+    padding: 12px 24px; border-radius: 999px; border: none; cursor: pointer;
+    font-size: .95rem; transition: transform .15s, box-shadow .15s;
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255,61,94,.35); }
+  .btn-outline {
+    background: transparent; color: var(--text) !important;
+    border: 1px solid var(--border);
+  }
+  .btn-outline:hover { border-color: var(--accent2); box-shadow: none; }
+
+  .hero { padding: 80px 0 60px; text-align: center; }
+  .hero h1 { font-size: clamp(2.2rem, 6vw, 3.6rem); letter-spacing: -.5px; }
+  .hero h1 span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero p { color: var(--muted); font-size: 1.15rem; max-width: 640px; margin: 18px auto 34px; }
+  .hero-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+  .badges { margin-top: 26px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .badge {
+    font-size: .78rem; color: var(--muted);
+    border: 1px solid var(--border); border-radius: 999px; padding: 5px 14px;
+  }
+  .hero-shot {
+    margin-top: 48px;
+    display: flex; justify-content: center; gap: 18px; align-items: flex-end;
+  }
+  .hero-shot img {
+    height: 460px; width: auto; border-radius: var(--radius);
+    border: 1px solid var(--border);
+    box-shadow: 0 30px 80px rgba(0,0,0,.6);
+  }
+  .hero-shot img.mid { height: 420px; opacity: .9; }
+
+  section { padding: 70px 0; }
+  .section-title { text-align: center; margin-bottom: 44px; }
+  .section-title h2 { font-size: clamp(1.6rem, 4vw, 2.3rem); letter-spacing: -.3px; }
+  .section-title p { color: var(--muted); margin-top: 8px; }
+
+  .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 26px;
+    transition: transform .15s, border-color .15s;
+  }
+  .card:hover { transform: translateY(-4px); border-color: var(--accent2); }
+  .card .icon {
+    width: 44px; height: 44px; border-radius: 12px; margin-bottom: 16px;
+    background: rgba(255,61,94,.12);
+    display: grid; place-items: center; font-size: 1.3rem;
+  }
+  .card h3 { font-size: 1.05rem; margin-bottom: 8px; }
+  .card p { color: var(--muted); font-size: .92rem; }
+
+  .shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; }
+  .shot { text-align: center; }
+  .shot img {
+    width: 100%; max-width: 260px; border-radius: var(--radius);
+    border: 1px solid var(--border);
+    box-shadow: 0 16px 40px rgba(0,0,0,.5);
+  }
+  .shot p { color: var(--muted); font-size: .85rem; margin-top: 10px; }
+
+  .downloads { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; max-width: 760px; margin: 0 auto; }
+  .download-card { text-align: center; }
+  .download-card .platform { font-size: 1.05rem; font-weight: 700; margin-bottom: 4px; }
+  .download-card .meta { color: var(--muted); font-size: .85rem; margin-bottom: 18px; }
+  .download-card .actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .status {
+    display: inline-block; font-size: .78rem; font-weight: 600;
+    padding: 4px 12px; border-radius: 999px; margin-bottom: 10px;
+  }
+  .status.ok { background: rgba(52,199,89,.15); color: #34c759; }
+  .status.no { background: rgba(255,149,0,.15); color: #ff9500; }
+
+  .notice {
+    max-width: 760px; margin: 34px auto 0;
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px 24px; font-size: .9rem; color: var(--muted);
+  }
+  .notice strong { color: var(--text); }
+  .notice code {
+    background: var(--card); padding: 2px 8px; border-radius: 6px;
+    font-size: .82rem; color: var(--accent2);
+  }
+
+  footer {
+    border-top: 1px solid var(--border); padding: 40px 0;
+    color: var(--muted); font-size: .85rem;
+  }
+  .footer-inner { display: flex; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
+  .footer-links { display: flex; gap: 18px; flex-wrap: wrap; }
+
+  @media (max-width: 720px) {
+    .hero-shot img, .hero-shot img.mid { height: 320px; }
+    .hero { padding: 54px 0 40px; }
+    section { padding: 50px 0; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container nav">
+    <a class="brand" href="#"><span class="logo">M</span>MyTube</a>
+    <nav class="nav-links">
+      <a href="#features">Características</a>
+      <a href="#shots">Capturas</a>
+      <a href="#downloads">Descargas</a>
+      <a href="https://github.com/JoseAdolfo19/my-tube" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="container">
+    <h1>Música continua.<br><span>Sin cortes.</span></h1>
+    <p>MyTube reproduce tus canciones favoritas de YouTube una tras otra, en bucle infinito, solo música de todos los géneros. Con video visible, mini player y audio en segundo plano.</p>
+    <div class="hero-actions">
+      <a class="btn" href="https://github.com/JoseAdolfo19/my-tube/releases/latest/download/my-tube.apk" download>Descargar APK</a>
+      <a class="btn btn-outline" href="https://github.com/JoseAdolfo19/my-tube" target="_blank" rel="noopener">Ver en GitHub</a>
+    </div>
+    <div class="badges">
+      <span class="badge">Android 7.0+</span>
+      <span class="badge">Open Source</span>
+      <span class="badge">Solo música</span>
+      <span class="badge">Cola infinita</span>
+    </div>
+    <div class="hero-shot">
+      <img class="mid" src="img/ss_mini.png" alt="Mini player">
+      <img src="img/ss_player.png" alt="Reproductor con cola">
+      <img class="mid" src="img/ss_feed.png" alt="Feed de música">
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="container">
+    <div class="section-title">
+      <h2>Características</h2>
+      <p>Todo lo que MyTube hace por ti.</p>
+    </div>
+    <div class="features">
+      <div class="card">
+        <div class="icon">🎵</div>
+        <h3>Solo música</h3>
+        <p>Feed, búsquedas y similares limitados a la categoría Música de YouTube. Nada de juegos, bromas ni noticias.</p>
+      </div>
+      <div class="card">
+        <div class="icon">🎛️</div>
+        <h3>Filtros de género</h3>
+        <p>Pop, reggaetón, salsa, cumbia, rock, bachata, baladas, vallenato, electrónica, corridos y más, en la parte superior.</p>
+      </div>
+      <div class="card">
+        <div class="icon">♾️</div>
+        <h3>Cola infinita</h3>
+        <p>Al reproducir se cargan 15 similares; al quedar 5 se agregan 10 más. Bucle infinito sin repetir la misma canción.</p>
+      </div>
+      <div class="card">
+        <div class="icon">📺</div>
+        <h3>Video visible</h3>
+        <p>Reproducción con video (mp4 ≤720p), botones anterior/siguiente, shuffle, repeat y PiP.</p>
+      </div>
+      <div class="card">
+        <div class="icon">🛌</div>
+        <h3>Mini player</h3>
+        <p>Al pulsar atrás el reproductor se colapsa al inicio como miniatura sin detener la música.</p>
+      </div>
+      <div class="card">
+        <div class="icon">🎧</div>
+        <h3>Segundo plano</h3>
+        <p>Sal de la app y el audio continúa con notificación de control y reproducción en segundo plano.</p>
+      </div>
+      <div class="card">
+        <div class="icon">🔍</div>
+        <h3>Búsqueda con historial</h3>
+        <p>Pantalla de búsqueda propia con historial persistente: borra, re-ejecuta y vuelve a tocar canciones buscadas antes.</p>
+      </div>
+      <div class="card">
+        <div class="icon">🌗</div>
+        <h3>Tema claro/oscuro</h3>
+        <p>Tarjetas estilo YouTube con duración, vistas y fecha. Inicio de sesión opcional con Google.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="shots">
+  <div class="container">
+    <div class="section-title">
+      <h2>La interfaz</h2>
+      <p>Un vistazo a la experiencia de MyTube.</p>
+    </div>
+    <div class="shots">
+      <div class="shot">
+        <img src="img/ss_feed.png" alt="Feed de música por géneros">
+        <p>Feed de música con filtros de género</p>
+      </div>
+      <div class="shot">
+        <img src="img/ss_player.png" alt="Reproductor con cola de similares">
+        <p>Reproductor expandido con cola de similares</p>
+      </div>
+      <div class="shot">
+        <img src="img/ss_mini.png" alt="Mini player en el inicio">
+        <p>Mini player: atrás y sigues escuchando</p>
+      </div>
+      <div class="shot">
+        <img src="img/ss_search.png" alt="Búsqueda con historial">
+        <p>Búsqueda con historial persistente</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="downloads">
+  <div class="container">
+    <div class="section-title">
+      <h2>Descargas</h2>
+      <p>Descarga la versión más reciente de MyTube.</p>
+    </div>
+    <div class="downloads">
+      <div class="card download-card">
+        <span class="status ok">Disponible</span>
+        <div class="platform">Android</div>
+        <div class="meta">Última versión estable · v1.0.0 · Requiere Android 7.0+</div>
+        <div class="actions">
+          <a class="btn" href="https://github.com/JoseAdolfo19/my-tube/releases/latest/download/my-tube.apk" download>Descargar APK</a>
+          <a class="btn btn-outline" href="https://github.com/JoseAdolfo19/my-tube/releases" target="_blank" rel="noopener">Versiones anteriores</a>
+        </div>
+      </div>
+      <div class="card download-card">
+        <span class="status no">Open Source</span>
+        <div class="platform">Código fuente</div>
+        <div class="meta">Contribuye, personaliza y reporta problemas.</div>
+        <div class="actions">
+          <a class="btn btn-outline" href="https://github.com/JoseAdolfo19/my-tube" target="_blank" rel="noopener">Star on GitHub</a>
+        </div>
+      </div>
+    </div>
+    <div class="notice">
+      <strong>Nota sobre el audio:</strong> para reproducción sin cortes (más allá de ~1 minuto), MyTube usa un
+      proxy local que resuelve el stream con po_token. Se lanza con
+      <code>python tools/audio_proxy.py 8080</code> en el PC y la app apunta a él
+      (o <code>adb reverse tcp:8080 tcp:8080</code> en desarrollo). Ver el README del repositorio.
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container footer-inner">
+    <span>© 2026 JoseAdolfo19. Hecho con ♥ para la música.</span>
+    <div class="footer-links">
+      <a href="https://github.com/JoseAdolfo19/my-tube" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/JoseAdolfo19/my-tube/releases" target="_blank" rel="noopener">Descargas</a>
+      <a href="https://github.com/JoseAdolfo19/my-tube/blob/main/README.md" target="_blank" rel="noopener">Documentación</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
