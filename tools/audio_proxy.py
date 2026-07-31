@@ -43,6 +43,7 @@ def resolve_url(video_id):
             "-g", "-f", "best[height<=720][ext=mp4]/best[ext=mp4]/bestaudio/best",
             "--no-playlist",
             "--no-warnings",
+            "--extractor-args", "youtube:player_client=android_music,android",
             f"https://www.youtube.com/watch?v={video_id}",
         ]
         log(f"resolviendo {video_id} ...")
