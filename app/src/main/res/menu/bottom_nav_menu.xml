@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_home"
+        android:icon="@drawable/ic_home"
+        android:title="Inicio" />
+    <item
+        android:id="@+id/nav_trending"
+        android:icon="@drawable/ic_trending_up"
+        android:title="Tendencias" />
+    <item
+        android:id="@+id/nav_music"
+        android:icon="@drawable/ic_music_note"
+        android:title="Música" />
+    <item
+        android:id="@+id/nav_subs"
+        android:icon="@drawable/ic_subscriptions"
+        android:title="Suscripciones" />
+    <item
+        android:id="@+id/nav_account"
+        android:icon="@drawable/ic_account_circle"
+        android:title="Cuenta" />
+</menu>
+

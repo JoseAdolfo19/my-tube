@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.MiAppVideos" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">#FF0000</item>
+        <item name="colorPrimaryVariant">#CC0000</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorSecondary">#212121</item>
+        <item name="colorSecondaryVariant">#000000</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="android:statusBarColor">#212121</item>
+        <item name="android:navigationBarColor">#000000</item>
+        <item name="android:windowBackground">#121212</item>
+        <item name="colorSurface">#212121</item>
+        <item name="colorOnSurface">#FFFFFF</item>
+        <item name="colorOnSurfaceVariant">#AAAAAA</item>
+    </style>
+</resources>

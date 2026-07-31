@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MyTube</string>
+    <string name="search_hint">Buscar videos...</string>
+    <string name="no_results">Sin resultados</string>
+    <string name="error_loading">Error al cargar videos</string>
+    <string name="channel_label">Canal:</string>
+    <string name="views_label">Vistas:</string>
+    <string name="google_signin_scheme" translatable="false">com.googleusercontent.apps.38145403059-lkn4onppsoqhe6sdlbpufnr9oqd2n22m</string>
+    <string name="youtube_api_key" translatable="false">AIzaSyAvAFo6fXIzJto1RkejUWg-BJHKon2qZNo</string>
+    <string name="google_signin_client_id" translatable="false">38145403059-lkn4onppsoqhe6sdlbpufnr9oqd2n22m.apps.googleusercontent.com</string>
+</resources>

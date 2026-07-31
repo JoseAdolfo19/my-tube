@@ -1,0 +1,426 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/rootLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:colorBackground">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:background="?attr/colorSurface"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageButton
+            android:id="@+id/btnMenu"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="start|center_vertical"
+            android:src="@drawable/ic_menu"
+            android:padding="8dp"
+            android:contentDescription="Menú"
+            android:tint="?attr/colorOnSurface"
+            android:background="?attr/selectableItemBackgroundBorderless" />
+
+        <TextView
+            android:id="@+id/logoTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="start|center_vertical"
+            android:layout_marginStart="8dp"
+            android:text="@string/app_name"
+            android:textColor="@color/youtube_red"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <ImageButton
+            android:id="@+id/btnCreate"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="end"
+            android:src="@drawable/ic_edit"
+            android:padding="8dp"
+            android:contentDescription="Crear"
+            android:tint="?attr/colorOnSurface"
+            android:background="?attr/selectableItemBackgroundBorderless" />
+
+        <ImageButton
+            android:id="@+id/btnSearch"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="end"
+            android:layout_marginEnd="4dp"
+            android:src="@drawable/ic_search"
+            android:padding="8dp"
+            android:contentDescription="Buscar"
+            android:tint="?attr/colorOnSurface"
+            android:background="?attr/selectableItemBackgroundBorderless" />
+
+        <ImageView
+            android:id="@+id/btnAvatar"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_gravity="end|center_vertical"
+            android:layout_marginEnd="4dp"
+            android:scaleType="centerCrop"
+            android:src="@drawable/ic_account_circle"
+            android:contentDescription="Cuenta"
+            android:background="?attr/selectableItemBackgroundBorderless" />
+
+    </com.google.android.material.appbar.MaterialToolbar>
+
+    <HorizontalScrollView
+        android:id="@+id/chipsRow"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:scrollbars="none"
+        app:layout_constraintTop_toBottomOf="@id/toolbar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chipGroup"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="4dp"
+            app:singleLine="true"
+            app:singleSelection="true">
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipTodo"
+                style="@style/Widget.MaterialComponents.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="Todo"
+                android:checked="true" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipMusica"
+                style="@style/Widget.MaterialComponents.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="Música" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipMixes"
+                style="@style/Widget.MaterialComponents.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="Mixes" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipVideojuegos"
+                style="@style/Widget.MaterialComponents.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="Videojuegos" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipNoticias"
+                style="@style/Widget.MaterialComponents.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="Noticias" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipDeportes"
+                style="@style/Widget.MaterialComponents.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="Deportes" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipComedia"
+                style="@style/Widget.MaterialComponents.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="Comedia" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipEducacion"
+                style="@style/Widget.MaterialComponents.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="Educación" />
+
+        </com.google.android.material.chip.ChipGroup>
+
+    </HorizontalScrollView>
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/searchLayout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        android:elevation="4dp"
+        android:layout_marginHorizontal="8dp"
+        android:layout_marginTop="4dp"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        app:layout_constraintTop_toBottomOf="@id/chipsRow"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/searchInput"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:hint="Buscar en YouTube"
+            android:textColor="?attr/colorOnSurface"
+            android:textColorHint="?attr/colorOnSurfaceVariant"
+            android:imeOptions="actionSearch"
+            android:inputType="text"
+            android:maxLines="1" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipeRefresh"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toBottomOf="@id/chipsRow"
+        app:layout_constraintBottom_toTopOf="@id/playerContainer"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerVideos"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingTop="4dp"
+            android:paddingBottom="8dp"
+            android:scrollbars="vertical"
+            android:overScrollMode="never" />
+
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+    <LinearLayout
+        android:id="@+id/playerContainer"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="?attr/colorSurface"
+        android:elevation="8dp"
+        android:visibility="gone"
+        android:clickable="true"
+        android:focusable="true"
+        app:layout_constraintBottom_toTopOf="@id/bottomNavigation"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Mini-player compact bar -->
+        <LinearLayout
+            android:id="@+id/miniPlayer"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="8dp"
+            android:orientation="horizontal"
+            android:background="?attr/colorSurface"
+            android:clickable="true"
+            android:focusable="true">
+
+            <ImageView
+                android:id="@+id/miniThumbnail"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:scaleType="centerCrop"
+                android:contentDescription="Thumbnail" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:paddingHorizontal="8dp">
+                <TextView
+                    android:id="@+id/miniTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textSize="13sp" />
+                <TextView
+                    android:id="@+id/miniChannel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <ImageButton
+                android:id="@+id/miniPrev"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:src="@drawable/ic_skip_previous"
+                android:tint="?attr/colorOnSurface"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Anterior" />
+
+            <ImageButton
+                android:id="@+id/miniPlayPause"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:src="@drawable/ic_pause"
+                android:tint="?attr/colorOnSurface"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Play/Pause" />
+
+            <ImageButton
+                android:id="@+id/miniNext"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:src="@drawable/ic_skip_next"
+                android:tint="?attr/colorOnSurface"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Siguiente" />
+
+            <ImageButton
+                android:id="@+id/miniExpand"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:src="@drawable/ic_expand_less"
+                android:tint="?attr/colorOnSurface"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Expandir" />
+
+        </LinearLayout>
+
+        <!-- Pantalla de reproducción (video arriba + cola debajo) -->
+        <LinearLayout
+            android:id="@+id/fullPlayerContainer"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <androidx.media3.ui.PlayerView
+                android:id="@+id/playerView"
+                android:layout_width="match_parent"
+                android:layout_height="240dp"
+                android:background="#000000"
+                app:use_controller="true"
+                app:show_buffering="when_playing"
+                app:resize_mode="fit" />
+
+            <LinearLayout
+                android:id="@+id/playerControlsBar"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:gravity="center_vertical"
+                android:paddingHorizontal="8dp"
+                android:orientation="horizontal"
+                android:background="?attr/colorSurface">
+
+                <ImageButton
+                    android:id="@+id/btnCollapse"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:src="@drawable/ic_close"
+                    android:tint="?attr/colorOnSurface"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Cerrar" />
+
+                <TextView
+                    android:id="@+id/titleTextView"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textSize="13sp"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:paddingHorizontal="4dp" />
+
+                <ImageButton
+                    android:id="@+id/btnShuffle"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:src="@drawable/ic_shuffle"
+                    android:tint="?attr/colorOnSurfaceVariant"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Aleatorio" />
+
+                <ImageButton
+                    android:id="@+id/btnRepeat"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:src="@drawable/ic_repeat"
+                    android:tint="?attr/colorOnSurfaceVariant"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Repetir" />
+
+                <ImageButton
+                    android:id="@+id/btnPlayPause"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:src="@drawable/ic_pause"
+                    android:tint="?attr/colorOnSurface"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Play/Pause" />
+
+                <ImageButton
+                    android:id="@+id/btnBackground"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:src="@drawable/ic_headphones"
+                    android:tint="?attr/colorOnSurface"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Reproducir en segundo plano" />
+
+                <ImageButton
+                    android:id="@+id/btnPip"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:src="@drawable/ic_picture_in_picture"
+                    android:tint="?attr/colorOnSurface"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Picture in Picture" />
+
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/queueHeader"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="8dp"
+                android:text="En cola"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/queueRecyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:scrollbars="vertical"
+                android:overScrollMode="never" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNavigation"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:background="?attr/colorSurface"
+        app:menu="@menu/bottom_nav_menu"
+        app:itemIconTint="?attr/colorOnSurface"
+        app:itemTextColor="?attr/colorOnSurface"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
