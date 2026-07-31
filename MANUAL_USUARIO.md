@@ -78,7 +78,6 @@ MyTube es un cliente de YouTube **sin anuncios**, orientado a música, hecho en 
 - **Paginación del feed**: el feed carga una página; no hay scroll infinito ni "cargar más".
 - **Región**: el feed popular usa `regionCode=MX`; algunos videos pueden estar bloqueados en la región (ej. `jfKfPfyJRdk` da UNPLAYABLE en Perú/MX).
 - **Mantenimiento**: las versiones de cliente InnerTube (`ClientProfiles`) caducan; cuando dejen de funcionar hay que actualizarlas (ver sección 8).
-- **Acentos mojibake**: algunos textos en `MainActivity.kt` muestran caracteres corruptos (ej. "Ya estÃ¡ en la cola" en vez de "Ya está en la cola") por un problema de codificación de archivos (UTF-8 mal decodificado). Es visible en diálogos. Pendiente de corregir.
 - **Piped API**: `PipedApi.kt` apunta a `pipedapi.kavin.rocks` que hoy está caída; el flujo principal no depende de ella (el feed usa YouTube Data API y los streams usan InnerTube/NewPipe).
 
 ---
@@ -656,7 +655,7 @@ class MainActivity : AppCompatActivity() {
                             videoQueue.add(video)
                             Toast.makeText(this, "Agregado a la cola", Toast.LENGTH_SHORT).show()
                         } else {
-                            Toast.makeText(this, "Ya estÃ¡ en la cola", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this, "Ya está en la cola", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -841,7 +840,7 @@ class MainActivity : AppCompatActivity() {
                     return@launch
                 }
             } catch (_: Exception) {}
-            runOnUiThread { Toast.makeText(this@MainActivity, "No se pudieron cargar videos. Verifica que YouTube Data API estÃ© habilitada.", Toast.LENGTH_LONG).show() }
+            runOnUiThread { Toast.makeText(this@MainActivity, "No se pudieron cargar videos. Verifica que YouTube Data API esté habilitada.", Toast.LENGTH_LONG).show() }
             isLoading = false
             onComplete?.invoke()
         }
@@ -4186,5 +4185,5 @@ class PlaylistAdapter(
 2. **403 de googlevideo**: si vuelve a aparecer, el `RangeFixingDataSource` ya lo mitiga (rangos ≤1 MB y cerrados). No bajar el `MAX_CHUNK` por debajo de 1 MB sin probar.
 3. **Piped API**: si se quiere reactivar, cambiar `BASE_URL` en `PipedApi.kt` a una instancia pública funcional (ver lista de instancias en https://github.com/TeamPiped/Piped).
 4. **Cuota de YouTube Data API**: el feed usa la cuota gratuita (10.000 unidades/día). Cada búsqueda cuesta 100; el feed de suscripciones consume varias (channels + playlistItems por canal).
-5. **Acentos mojibake**: los textos con caracteres raros (ej. `estÃ¡`) en `MainActivity.kt` deben corregirse re-escribiendo el archivo en UTF-8.
+5. **Codificación UTF-8**: todos los archivos `.kt`/`.xml` deben guardarse en UTF-8 sin BOM. Si se editan textos con acentos y aparecen caracteres raros (ej. `estÃ¡`), el archivo fue guardado con otra codificación; corregir re-guardando en UTF-8.
 6. **APK de release**: `gradlew assembleRelease` (sin minify). Requiere `proguard-rules.pro` si se activa `isMinifyEnabled`.

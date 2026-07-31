@@ -1,4 +1,4 @@
-﻿package com.miappvideos
+package com.miappvideos
 
 import android.app.PictureInPictureParams
 import android.content.Context
@@ -323,7 +323,7 @@ class MainActivity : AppCompatActivity() {
                             videoQueue.add(video)
                             Toast.makeText(this, "Agregado a la cola", Toast.LENGTH_SHORT).show()
                         } else {
-                            Toast.makeText(this, "Ya estÃ¡ en la cola", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this, "Ya está en la cola", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -352,7 +352,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun showMenuDialog() {
         val items = mutableListOf("Cambiar tema")
-        if (isSignedIn) items.add("Cerrar sesiÃ³n")
+        if (isSignedIn) items.add("Cerrar sesión")
         androidx.appcompat.app.AlertDialog.Builder(this)
             .setTitle("Opciones")
             .setItems(items.toTypedArray()) { _, which ->
@@ -396,7 +396,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnCreate.setOnClickListener {
-            Toast.makeText(this, "FunciÃ³n de crear aÃºn no disponible", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Función de crear aún no disponible", Toast.LENGTH_SHORT).show()
         }
 
         btnAvatar.setOnClickListener {
@@ -450,14 +450,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun categoryQuery(id: Int): String = when (id) {
-        R.id.chipMusica -> "mÃºsica"
+        R.id.chipMusica -> "música"
         R.id.chipMixes -> "mixes"
         R.id.chipVideojuegos -> "videojuegos"
         R.id.chipNoticias -> "noticias"
         R.id.chipDeportes -> "deportes"
         R.id.chipComedia -> "comedia"
-        R.id.chipEducacion -> "educaciÃ³n"
-        else -> "mÃºsica"
+        R.id.chipEducacion -> "educación"
+        else -> "música"
     }
 
     private fun loadAvatar() {
@@ -508,7 +508,7 @@ class MainActivity : AppCompatActivity() {
                     return@launch
                 }
             } catch (_: Exception) {}
-            runOnUiThread { Toast.makeText(this@MainActivity, "No se pudieron cargar videos. Verifica que YouTube Data API estÃ© habilitada.", Toast.LENGTH_LONG).show() }
+            runOnUiThread { Toast.makeText(this@MainActivity, "No se pudieron cargar videos. Verifica que YouTube Data API esté habilitada.", Toast.LENGTH_LONG).show() }
             isLoading = false
             onComplete?.invoke()
         }
@@ -535,7 +535,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadSubscriptions() {
         if (!isSignedIn) {
-            Toast.makeText(this, "Inicia sesiÃ³n para ver tus suscripciones", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Inicia sesión para ver tus suscripciones", Toast.LENGTH_SHORT).show()
             openAccount()
             return
         }
@@ -642,7 +642,7 @@ class MainActivity : AppCompatActivity() {
         titleTextView.text = "Bienvenido, Invitado"
         youTubeManager.setAccessToken(null)
         loadAvatar()
-        Toast.makeText(this, "SesiÃ³n cerrada", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Sesión cerrada", Toast.LENGTH_SHORT).show()
     }
 
     private fun com.miappvideos.model.YouTubeVideo.toPipedVideo(): PipedVideo {
@@ -654,7 +654,7 @@ class MainActivity : AppCompatActivity() {
         val thumb = snippet?.thumbnails?.medium?.url ?: snippet?.thumbnails?.high?.url
         return PipedVideo(
             url = "https://www.youtube.com/watch?v=$videoId",
-            title = snippet?.title ?: "Sin tÃ­tulo",
+            title = snippet?.title ?: "Sin título",
             thumbnail = thumb,
             uploaderName = snippet?.channelTitle,
             uploaderAvatar = null,
@@ -734,7 +734,7 @@ class MainActivity : AppCompatActivity() {
                 val obj = arr.getJSONObject(i)
                 val video = com.miappvideos.model.PipedVideo(
                     url = obj.optString("url").takeIf { it.isNotEmpty() },
-                    title = obj.optString("title", "Sin tÃ­tulo"),
+                    title = obj.optString("title", "Sin título"),
                     thumbnail = obj.optString("thumbnail").takeIf { it.isNotEmpty() },
                     uploaderName = obj.optString("uploaderName").takeIf { it.isNotEmpty() },
                     uploaderAvatar = obj.optString("uploaderAvatar").takeIf { it.isNotEmpty() },
