@@ -174,6 +174,35 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
             return
+        parsed = urllib.parse.urlparse(self.path)
+        query = urllib.parse.parse_qs(parsed.query)
+        if parsed.path == "/diag":
+            if PROXY_KEY and (query.get("key") or [""])[0] != PROXY_KEY:
+                self.send_error_json(401, "key invalida")
+                return
+            video_id = (query.get("v") or [""])[0]
+            if not re.fullmatch(r"[A-Za-z0-9_-]{11}", video_id):
+                self.send_error_json(400, "v invalido")
+                return
+            cmd = [
+                sys.executable, "-m", "yt_dlp", "-v",
+                "-f", "bestaudio", "--no-playlist", "--no-warnings", "-g",
+                "--extractor-args", "youtube:player_client=android_music,web_safari",
+                f"https://www.youtube.com/watch?v={video_id}",
+            ]
+            try:
+                result = subprocess.run(cmd, capture_output=True, text=True,
+                                        timeout=120)
+                diag = f"rc={result.returncode}\n--- STDOUT ---\n{result.stdout[-4000:]}\n--- STDERR ---\n{result.stderr[-4000:]}"
+            except subprocess.TimeoutExpired:
+                diag = "TIMEOUT 120s"
+            body = diag.encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
         video_id = self.parse_video_id()
         if video_id is None:
             self.send_error_json(404, "solo /audio?v=<videoId>")
