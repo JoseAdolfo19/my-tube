@@ -133,12 +133,33 @@ apksigner verify --verbose --print-certs app/build/outputs/apk/release/app-relea
 - `InnerTubeClient` loguea el endpoint → código HTTP + primeros 80 bytes del body (p. ej. `LOGIN_REQUIRED`, `Precondition check failed`, `UNPLAYABLE`).
 - Validación en dispositivo: `adb logcat -s StreamResolver:* MusicStreamProvider:*`.
 
+## Inspiración
+
+El motor de reproducción de MyTube está inspirado en **[OpenTune](https://github.com/OpenTuneApp/OpenTune)** (cliente de música de código abierto): de ahí provienen las ideas y el mecanismo base de **InnerTube + po_token + visitorData** que la app usa para resolver streams y búsquedas sin cuotas de API ni cortes de reproducción. A diferencia de OpenTune (solo audio), MyTube además combina la pista de video con `MergingMediaSource`.
+
 ## Limitaciones conocidas
 
 - Las versiones de cliente InnerTube caducan; cuando aparezca `Precondition check failed`/`UNPLAYABLE`, actualiza el mapa de versiones en `YouTubeClient.kt`.
 - Algunos videos están bloqueados por región (`UNPLAYABLE`) — decide YouTube según video/IP.
 - El `po_token` sintético **no** pasa en `WEB_REMIX`; los clientes móviles (ANDROID_VR/ANDROID) funcionan sin él hoy.
 - La cola es en memoria (se pierde al reiniciar la app); solo el historial de búsqueda/reproducción es persistente.
+
+## Pendiente: error 10 en inicio de sesión con Google
+
+El login con Google falla con **Error 10 (DEVELOPER_ERROR)** en el APK release. Causa probable: el SHA-1 de la firma del release no está registrado en Google Cloud Console.
+
+**Para mañana:**
+
+1. Obtener el SHA-1 de la firma de producción:
+   ```bash
+   keytool -list -v -keystore app/keystore/release.jks -alias mytube -storepass <pass>
+   # SHA1: 91:7D:A5:CF:14:D2:AA:88:A1:78:F0:A3:13:C9:4B:73:F1:E5:AF:23
+   ```
+2. En [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → Credenciales → el OAuth Client ID de Android (`com.miappvideos`): añadir el SHA-1 anterior (o crear un client ID nuevo con él).
+3. Si se crea un client ID nuevo, actualizar `googleSignInClientId` en `local.properties` (y `strings.xml`/manifest si se referencia ahí) y recompilar el release.
+4. Reinstalar y probar el login.
+
+Nota: el login funcionaba en debug porque el SHA-1 del keystore de depuración de Android Studio sí está registrado; el keystore de release (`app/keystore/release.jks`) es distinto.
 
 ## Licencia
 
