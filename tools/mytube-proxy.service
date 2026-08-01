@@ -1,0 +1,14 @@
+[Unit]
+Description=MyTube Audio Proxy
+After=network.target
+
+[Service]
+Environment=PROXY_KEY=cambia_esta_key
+Environment=PORT=8080
+WorkingDirectory=/home/ubuntu/my-tube/tools
+ExecStart=/home/ubuntu/my-tube/tools/venv/bin/python audio_proxy.py
+Restart=always
+User=ubuntu
+
+[Install]
+WantedBy=multi-user.target
