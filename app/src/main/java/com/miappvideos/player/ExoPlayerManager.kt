@@ -7,6 +7,8 @@ import androidx.media3.common.Player
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.MergingMediaSource
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import com.miappvideos.api.innertube.RotatingHttpClient
 
 class ExoPlayerManager(context: Context) {
@@ -41,16 +43,26 @@ class ExoPlayerManager(context: Context) {
     private val listeners = mutableListOf<Player.Listener>()
 
     fun playUrl(url: String, title: String = "") {
-        val mediaItem = MediaItem.Builder()
-            .setUri(url)
-            .setMediaMetadata(
-                MediaMetadata.Builder()
-                    .setTitle(title)
-                    .setArtist("MyTube")
-                    .build()
-            )
+        playAudioVideo(url, null, title)
+    }
+
+    fun playAudioVideo(audioUrl: String, videoUrl: String?, title: String = "") {
+        val metadata = MediaMetadata.Builder()
+            .setTitle(title)
+            .setArtist("MyTube")
             .build()
-        player.setMediaItem(mediaItem)
+        val source = if (videoUrl != null) {
+            MergingMediaSource(
+                ProgressiveMediaSource.Factory(dataSourceFactory)
+                    .createMediaSource(MediaItem.Builder().setUri(audioUrl).build()),
+                ProgressiveMediaSource.Factory(dataSourceFactory)
+                    .createMediaSource(MediaItem.Builder().setUri(videoUrl).build())
+            )
+        } else {
+            ProgressiveMediaSource.Factory(dataSourceFactory)
+                .createMediaSource(MediaItem.Builder().setUri(audioUrl).setMediaMetadata(metadata).build())
+        }
+        player.setMediaSource(source)
         player.prepare()
         player.play()
     }

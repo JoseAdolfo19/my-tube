@@ -773,9 +773,9 @@ class MainActivity : AppCompatActivity() {
         saveWatchHistory()
 
         lifecycleScope.launch {
-            val url = com.miappvideos.api.MusicStreamProvider.getAudioStream(videoId)
-            if (url != null) {
-                playerManager.playUrl(url, video.title)
+            val stream = com.miappvideos.api.MusicStreamProvider.getStream(videoId)
+            if (stream != null) {
+                playerManager.playAudioVideo(stream.audioUrl, stream.videoUrl, video.title)
                 startBackgroundPlayback(showToast = false)
                 showMiniPlayer()
             } else {

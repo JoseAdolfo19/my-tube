@@ -34,6 +34,18 @@ object MusicStreamProvider {
 
     private val cache = mutableMapOf<String, String?>()
 
+    data class StreamResult(
+        val audioUrl: String,
+        val videoUrl: String?,
+        val clientName: String? = null,
+    )
+
+    suspend fun getStream(videoId: String): StreamResult? = withContext(Dispatchers.IO) {
+        fetchStreamFromInnerTube(videoId)
+            ?: fetchStreamFromProxy(videoId)
+            ?: fetchStreamFromExistingProvider(videoId)
+    }
+
     suspend fun getAudioStream(videoId: String): String? = withContext(Dispatchers.IO) {
         cache[videoId] ?: run {
             val result = fetchFromInnerTube(videoId)
@@ -55,6 +67,32 @@ object MusicStreamProvider {
 
     fun clearCache() {
         cache.clear()
+    }
+
+    private suspend fun fetchStreamFromInnerTube(videoId: String): StreamResult? {
+        val result = StreamResolver.resolveStreamUrl(videoId)
+        return result.getOrNull()?.let {
+            Log.d(TAG, "InnerTube OK (${it.clientName}) para $videoId video=${it.videoUrl != null}")
+            StreamResult(audioUrl = it.url, videoUrl = it.videoUrl, clientName = it.clientName)
+        }
+    }
+
+    private fun fetchStreamFromProxy(videoId: String): StreamResult? {
+        val url = fetchFromProxy(videoId) ?: return null
+        return StreamResult(audioUrl = url, videoUrl = null)
+    }
+
+    private suspend fun fetchStreamFromExistingProvider(videoId: String): StreamResult? {
+        return try {
+            val streams = StreamProvider.getStreams(videoId) ?: return null
+            val audioUrl = streams.audioStreams?.maxByOrNull { it.bitrate ?: 0 }?.url ?: return null
+            val muxed = streams.videoStreams?.filter { it.videoOnly == false }
+            val videoUrl = (muxed ?: emptyList()).maxByOrNull { it.height ?: 0 }?.url
+            StreamResult(audioUrl = audioUrl, videoUrl = videoUrl)
+        } catch (e: Exception) {
+            Log.d(TAG, "Fallback fallo para $videoId: ${e.message}")
+            null
+        }
     }
 
     private suspend fun fetchFromInnerTube(videoId: String): String? {

@@ -74,6 +74,7 @@ object StreamResolver {
         val expiresInSeconds: Int?,
         val clientName: String,
         val bitrate: Int,
+        val videoUrl: String? = null,
     )
 
     /**
@@ -141,11 +142,15 @@ object StreamResolver {
                     }
                     val ttl = (expiresInSeconds ?: 21600) * 1000L
                     streamUrlCache[cacheKey] = CachedStreamUrl(url, System.currentTimeMillis() + ttl)
+
+                    val videoUrl = resolveVideoUrl(streamingData, videoId, client)
+
                     resolved = ResolvedStream(
                         url = url,
                         expiresInSeconds = expiresInSeconds,
                         clientName = client.clientName,
                         bitrate = format.bitrate,
+                        videoUrl = videoUrl,
                     )
                     break
                 }
@@ -279,6 +284,33 @@ object StreamResolver {
         }
     }
 
+    /**
+     * Resuelve una URL de video para el mismo [videoId]: prefiere el formato
+     * muxed (formats[], itag 18) y si no existe, el video-only de menor
+     * resolucion (suficiente para musica).
+     */
+    private fun resolveVideoUrl(
+        streamingData: JSONObject,
+        videoId: String,
+        client: YouTubeClient,
+    ): String? {
+        val candidates = parseVideoFormats(streamingData)
+        for (format in candidates.take(3)) {
+            val cacheKey = "v:$videoId:${format.itag}"
+            val cached = streamUrlCache[cacheKey]
+            val url = if (cached != null && cached.expiresAtMs > System.currentTimeMillis()) {
+                cached.url
+            } else {
+                resolveFormatUrl(format, videoId, client) ?: continue
+            }
+            if (!validateStatus(url, client)) continue
+            streamUrlCache[cacheKey] =
+                CachedStreamUrl(url, System.currentTimeMillis() + 21600 * 1000L)
+            return url
+        }
+        return null
+    }
+
     private data class Format(
         val itag: Int,
         val url: String?,
@@ -286,6 +318,7 @@ object StreamResolver {
         val bitrate: Int,
         val signatureCipher: String?,
         val cipher: String?,
+        val height: Int = 0,
     )
 
     private fun parseAudioFormats(jsonArray: org.json.JSONArray?): List<Format> {
@@ -312,6 +345,57 @@ object StreamResolver {
             )
         }
         return result.sortedByDescending { it.bitrate }
+    }
+
+    private fun parseVideoFormats(streamingData: JSONObject): List<Format> {
+        val result = mutableListOf<Format>()
+
+        val muxed = streamingData.optJSONArray("formats")
+        if (muxed != null) {
+            for (i in 0 until muxed.length()) {
+                val item = muxed.optJSONObject(i) ?: continue
+                if (item.optInt("width", 0) <= 0) continue
+                val url = item.optString("url").takeIf { it.isNotBlank() }
+                val signatureCipher = item.optString("signatureCipher").takeIf { it.isNotBlank() }
+                val cipher = item.optString("cipher").takeIf { it.isNotBlank() }
+                if (url == null && signatureCipher == null && cipher == null) continue
+                result.add(
+                    Format(
+                        itag = item.optInt("itag", 0),
+                        url = url,
+                        mimeType = item.optString("mimeType", ""),
+                        bitrate = item.optInt("bitrate", 0),
+                        signatureCipher = signatureCipher,
+                        cipher = cipher,
+                        height = item.optInt("height", 0),
+                    )
+                )
+            }
+        }
+        if (result.isNotEmpty()) return result.sortedByDescending { it.height }
+
+        val adaptive = streamingData.optJSONArray("adaptiveFormats") ?: return emptyList()
+        for (i in 0 until adaptive.length()) {
+            val item = adaptive.optJSONObject(i) ?: continue
+            val width = item.optInt("width", 0)
+            if (width <= 0) continue
+            val url = item.optString("url").takeIf { it.isNotBlank() }
+            val signatureCipher = item.optString("signatureCipher").takeIf { it.isNotBlank() }
+            val cipher = item.optString("cipher").takeIf { it.isNotBlank() }
+            if (url == null && signatureCipher == null && cipher == null) continue
+            result.add(
+                Format(
+                    itag = item.optInt("itag", 0),
+                    url = url,
+                    mimeType = item.optString("mimeType", ""),
+                    bitrate = item.optInt("bitrate", 0),
+                    signatureCipher = signatureCipher,
+                    cipher = cipher,
+                    height = item.optInt("height", 0),
+                )
+            )
+        }
+        return result.sortedBy { it.height }
     }
 
     private fun parseQueryString(cipher: String): Map<String, String> {
