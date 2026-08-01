@@ -553,6 +553,12 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val combined = mutableListOf<com.miappvideos.model.PipedVideo>()
             try {
+                val innerTubeResults = com.miappvideos.api.innertube.InnerTubeSearch.search("${preferredQuery()} música")
+                if (innerTubeResults.isNotEmpty()) {
+                    combined.addAll(innerTubeResults.filter { isMusicVideo(it) })
+                }
+            } catch (_: Exception) {}
+            try {
                 val ytVideos = youTubeManager.getPopularVideos()
                 if (ytVideos.isNotEmpty()) {
                     combined.addAll(ytVideos.map { it.toPipedVideo() })
@@ -594,6 +600,13 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val musicQuery = listOfNotNull(query.takeIf { it.isNotBlank() }, "música")
                 .joinToString(" ")
+            try {
+                val innerTubeResults = com.miappvideos.api.innertube.InnerTubeSearch.search(musicQuery)
+                if (innerTubeResults.isNotEmpty()) {
+                    adapter.updateVideos(innerTubeResults.take(30))
+                    return@launch
+                }
+            } catch (_: Exception) {}
             try {
                 val ytVideos = youTubeManager.searchYouTube(musicQuery, musicOnly = true)
                 if (ytVideos.isNotEmpty()) {
@@ -848,8 +861,13 @@ class MainActivity : AppCompatActivity() {
 
         val baseQuery = listOfNotNull(artist, video.title).joinToString(" ").take(60)
         try {
-            collect(youTubeManager.searchYouTube(baseQuery.ifBlank { "música" }, musicOnly = true).map { it.toPipedVideo() })
+            collect(com.miappvideos.api.innertube.InnerTubeSearch.search(baseQuery.ifBlank { "música" }))
         } catch (_: Exception) {}
+        if (similar.isEmpty()) {
+            try {
+                collect(youTubeManager.searchYouTube(baseQuery.ifBlank { "música" }, musicOnly = true).map { it.toPipedVideo() })
+            } catch (_: Exception) {}
+        }
         if (similar.isEmpty()) {
             try {
                 collect(api.search(baseQuery.ifBlank { "música" }).items)
@@ -860,8 +878,13 @@ class MainActivity : AppCompatActivity() {
         if (similar.size < 8 && artist.isNotBlank()) {
             val artistQuery = "$artist música"
             try {
-                collect(youTubeManager.searchYouTube(artistQuery, musicOnly = true).map { it.toPipedVideo() })
+                collect(com.miappvideos.api.innertube.InnerTubeSearch.search(artistQuery))
             } catch (_: Exception) {}
+            if (similar.size < 8) {
+                try {
+                    collect(youTubeManager.searchYouTube(artistQuery, musicOnly = true).map { it.toPipedVideo() })
+                } catch (_: Exception) {}
+            }
             if (similar.size < 8) {
                 try {
                     collect(api.search(artistQuery).items)

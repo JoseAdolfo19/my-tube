@@ -158,6 +158,13 @@ class SearchActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
+                val innerTubeResults = com.miappvideos.api.innertube.InnerTubeSearch.search(query)
+                if (innerTubeResults.isNotEmpty()) {
+                    resultsAdapter.updateVideos(innerTubeResults.take(30))
+                    return@launch
+                }
+            } catch (_: Exception) {}
+            try {
                 val ytVideos = youTubeManager.searchYouTube(query)
                 if (ytVideos.isNotEmpty()) {
                     resultsAdapter.updateVideos(ytVideos.map { it.toPipedVideo() })
