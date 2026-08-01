@@ -5,9 +5,12 @@ services:
     plan: free
     repo: https://github.com/JoseAdolfo19/my-tube
     branch: main
-    buildCommand: pip install -r tools/requirements.txt && curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/opt/deno sh -s -- --yes
-    startCommand: export PATH=/opt/deno/bin:$PATH; python tools/audio_proxy.py
+    autoDeploy: true
+    buildCommand: pip install -r tools/requirements.txt
+    startCommand: python tools/audio_proxy.py
     healthCheckPath: /
+    envSpecificDetails:
+      pythonVersion: 3.12.7
     envVars:
       - key: PROXY_KEY
-        value: mytube-2026-proxy
+        sync: false

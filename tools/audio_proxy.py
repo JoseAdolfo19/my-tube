@@ -176,6 +176,17 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return
         parsed = urllib.parse.urlparse(self.path)
         query = urllib.parse.parse_qs(parsed.query)
+        if parsed.path == "/version":
+            body = json.dumps({
+                "commit": os.environ.get("RENDER_GIT_COMMIT", "unknown")[:7],
+                "instance": os.environ.get("RENDER_INSTANCE_ID", "unknown"),
+            }).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
         if parsed.path == "/diag":
             if PROXY_KEY and (query.get("key") or [""])[0] != PROXY_KEY:
                 self.send_error_json(401, "key invalida")
