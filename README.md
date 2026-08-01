@@ -1,145 +1,145 @@
 # MyTube
 
-Music-first Android client for YouTube. Continuous playback (infinite queue), visible video, search without API quotas, mini player, background playback and picture-in-picture.
+Cliente Android de YouTube orientado a música. Reproducción continua (cola infinita), video visible, búsqueda sin cuotas de API, mini player, segundo plano y picture-in-picture.
 
 <p>
-  <a href="https://mytubemusic.vercel.app/"><img src="https://img.shields.io/badge/site-mytubemusic.vercel.app-FF3D5E" alt="Site"></a>
+  <a href="https://mytubemusic.vercel.app/"><img src="https://img.shields.io/badge/site-mytubemusic.vercel.app-FF3D5E" alt="Sitio"></a>
   <a href="https://github.com/JoseAdolfo19/my-tube/releases/latest"><img src="https://img.shields.io/github/v/release/JoseAdolfo19/my-tube" alt="Release"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="Licencia"></a>
 </p>
 
-**Download the APK:** [Latest release](https://github.com/JoseAdolfo19/my-tube/releases/latest/download/my-tube.apk) · Android 7.0+ (API 24+)
+**Descarga el APK:** [Último release](https://github.com/JoseAdolfo19/my-tube/releases/latest/download/my-tube.apk) · Android 7.0+ (API 24+)
 
 ---
 
-## Highlights
+## Características destacadas
 
-- **Music-only catalog** — feed, genre filters and search restricted to YouTube's Music category.
-- **Infinite queue** — playing a track loads 15 similar videos; when 5 remain, 10 more are appended. Never repeats.
-- **Visible video** — ExoPlayer renders the video track (muxed itag 18 or low-res video-only ≤720p) merged with the audio stream via `MergingMediaSource`.
-- **No API quota dependency** — search, trending and streams are resolved directly through YouTube's **InnerTube** protocol (same mechanism OpenTune/Innertune use), so no Google Cloud quota is required for core playback.
-- **Background playback** — foreground `PlayerService` with MediaSession notification; mini player + PiP support.
-- **Search with persistent history** — own search screen with recent queries (clear, re-run, re-play).
-- **Optional Google sign-in** — subscriptions and playlists via YouTube Data API v3 (requires your own key).
-- **Light/dark theme** — YouTube-style cards with duration, views and relative date.
+- **Catálogo solo música** — el feed, los filtros de género y las búsquedas están limitados a la categoría Música de YouTube.
+- **Cola infinita** — al reproducir una canción se cargan 15 similares; cuando quedan 5 se agregan 10 más. Nunca repite.
+- **Video visible** — ExoPlayer renderiza la pista de video (muxed itag 18 o video-only ≤720p) combinada con el audio mediante `MergingMediaSource`.
+- **Sin dependencia de cuotas** — la búsqueda, el trending y los streams se resuelven directamente con el protocolo **InnerTube** de YouTube (el mismo mecanismo que usan OpenTune/Innertune): no se necesita cuota de Google Cloud para la reproducción principal.
+- **Segundo plano** — `PlayerService` en foreground con notificación de MediaSession; mini player y PiP.
+- **Búsqueda con historial persistente** — pantalla propia de búsqueda con consultas recientes (borrar, re-ejecutar, re-reproducir).
+- **Inicio de sesión opcional con Google** — suscripciones y playlists vía YouTube Data API v3 (requiere tu propia key).
+- **Tema claro/oscuro** — tarjetas estilo YouTube con duración, vistas y fecha relativa.
 
-## Screenshots
+## Capturas
 
-| Feed | Player + queue | Mini player | Search |
+| Feed | Reproductor + cola | Mini player | Búsqueda |
 |---|---|---|---|
-| ![Feed](site/img/ss_feed.png) | ![Player](site/img/ss_player.png) | ![Mini](site/img/ss_mini.png) | ![Search](site/img/ss_search.png) |
+| ![Feed](site/img/ss_feed.png) | ![Reproductor](site/img/ss_player.png) | ![Mini](site/img/ss_mini.png) | ![Búsqueda](site/img/ss_search.png) |
 
-## How streams are resolved (no more ~1-minute cutoff)
+## Cómo se resuelven los streams (sin el corte de ~1 minuto)
 
-Legacy clients (IOS, WEB_MUSIC) either return HTTP 400 (`Precondition check failed`) or `LOGIN_REQUIRED`. The app tries the following cascade and stops at the first success (see `StreamResolver.resolveStreamUrl`):
+Los clientes antiguos (IOS, WEB_MUSIC) responden HTTP 400 (`Precondition check failed`) o `LOGIN_REQUIRED`. La app prueba la siguiente cascada y se detiene en el primer éxito (ver `StreamResolver.resolveStreamUrl`):
 
-1. `ANDROID` (MOBILE) — works, may require signed visitorData.
-2. `ANDROID_VR` — **preferred**: returns full streams without login; used for both audio and video.
-3. `ANDROID_MUSIC` / `IOS_MUSIC` — skipped at runtime when YouTube returns `LOGIN_REQUIRED`.
-4. Fallbacks: local audio proxy → `StreamProvider` (NewPipeExtractor / Piped).
+1. `ANDROID` (MOBILE) — funciona; puede requerir visitorData firmado.
+2. `ANDROID_VR` — **preferido**: devuelve streams completos sin login; se usa tanto para audio como para video.
+3. `ANDROID_MUSIC` / `IOS_MUSIC` — se saltan en tiempo de ejecución cuando YouTube devuelve `LOGIN_REQUIRED`.
+4. Fallbacks: proxy de audio local → `StreamProvider` (NewPipeExtractor / Piped).
 
-Each client request is signed with the app's own `visitorData` (fetched from `https://www.youtube.com/sw.js_data`, URL-decoded) and optional `po_token` (see `PoTokenGenerator`). Verified clients are cached per `videoId`; failing clients get a per-video cool-down (`markStreamClientFailed`). Stream URLs are cached in memory until `expiresInSeconds`.
+Cada petición de cliente se firma con `visitorData` propio de la app (descargado de `https://www.youtube.com/sw.js_data`, con URL-decode) y `po_token` opcional (ver `PoTokenGenerator`). Los clientes verificados se cachean por `videoId`; los que fallan entran en un cooldown por video (`markStreamClientFailed`). Las URLs de stream se cachean en memoria hasta `expiresInSeconds`.
 
-Client profile (`ClientProfiles`/`YouTubeClient`) and API key updates are tracked in:
-`app/src/main/java/com/miappvideos/api/innertube/YouTubeClient.kt` and `NativeStreamExtractor.kt`.
+Las versiones de perfil de cliente y la API key de InnerTube se actualizan en:
+`app/src/main/java/com/miappvideos/api/innertube/YouTubeClient.kt` y `NativeStreamExtractor.kt`.
 
-## Search without quotas
+## Búsqueda sin cuotas
 
-- `InnerTubeSearch.searchVideos()` queries YouTube's **WEB** client (`twoColumnSearchResultsRenderer` → `videoRenderer`), ~19 results per query.
-- Fallbacks: `YouTubeDataManager` (Data API v3, requires your key in `local.properties`) → Piped API.
+- `InnerTubeSearch.searchVideos()` consulta el cliente **WEB** de YouTube (`twoColumnSearchResultsRenderer` → `videoRenderer`), ~19 resultados por consulta.
+- Fallbacks: `YouTubeDataManager` (Data API v3, requiere tu key en `local.properties`) → Piped API.
 
-Used by `MainActivity` (trending + autoplay "similar videos") and `SearchActivity`.
+Se usa desde `MainActivity` (trending + autoplay de "similares") y `SearchActivity`.
 
-## Architecture
+## Arquitectura
 
 ```
 app/src/main/java/com/miappvideos/
-├── MainActivity.kt              # Feed, genre chips, player UI, queue, autoplay logic
-├── SearchActivity.kt            # Search screen with persistent history
-├── MiAppVideosApplication.kt    # App init (NewPipeExtractor)
+├── MainActivity.kt              # Feed, chips de género, UI del reproductor, cola, autoplay
+├── SearchActivity.kt            # Pantalla de búsqueda con historial persistente
+├── MiAppVideosApplication.kt    # Init de la app (NewPipeExtractor)
 ├── api/
-│   ├── MusicStreamProvider.kt   # Orchestrates audio+video: InnerTube → proxy → StreamProvider
-│   ├── StreamProvider.kt        # Stream cache (NewPipeExtractor)
-│   ├── YouTubeDataManager.kt    # YouTube Data API v3 (optional key)
+│   ├── MusicStreamProvider.kt   # Orquesta audio+video: InnerTube → proxy → StreamProvider
+│   ├── StreamProvider.kt        # Cache de streams (NewPipeExtractor)
+│   ├── YouTubeDataManager.kt    # YouTube Data API v3 (key opcional)
 │   ├── YouTubeApi.kt, PipedApi.kt
 │   └── innertube/
-│       ├── InnerTubeClient.kt   # POST /player, /search, visitorData fetch, retry logic
-│       ├── StreamResolver.kt    # Client cascade, audio+video format selection, caching
-│       ├── InnerTubeSearch.kt   # WEB search parsing (videoRenderer)
-│       ├── YouTubeClient.kt     # Client profiles + InnerTube API key
-│       ├── PoTokenGenerator.kt  # po_token synthesis (synthetic token)
-│       └── RotatingHttpClient.kt# Shared OkHttp
+│       ├── InnerTubeClient.kt   # POST /player, /search, fetch de visitorData, retries
+│       ├── StreamResolver.kt    # Cascada de clientes, selección audio+video, cache
+│       ├── InnerTubeSearch.kt   # Parseo del search WEB (videoRenderer)
+│       ├── YouTubeClient.kt     # Perfiles de cliente + API key de InnerTube
+│       ├── PoTokenGenerator.kt  # Síntesis de po_token (token sintético)
+│       └── RotatingHttpClient.kt# OkHttp compartido
 ├── player/
-│   ├── ExoPlayerManager.kt      # ExoPlayer wrapper; playAudioVideo() uses MergingMediaSource
-│   ├── RangeFixingDataSource.kt # 1 MB max range fix for googlevideo URLs
-│   ├── PlayerService.kt         # Foreground background playback + MediaSession
-└── auth/LoginActivity.kt        # Optional Google sign-in
+│   ├── ExoPlayerManager.kt      # Wrapper de ExoPlayer; playAudioVideo() usa MergingMediaSource
+│   ├── RangeFixingDataSource.kt # Fix de rangos máx 1 MB para URLs de googlevideo
+│   ├── PlayerService.kt         # Segundo plano en foreground + MediaSession
+└── auth/LoginActivity.kt        # Inicio de sesión opcional con Google
 ```
 
-### Playback flow
+### Flujo de reproducción
 
 ```
-Tap video
+Tocar un video
   → MusicStreamProvider.getStream(videoId)
       → StreamResolver.resolveStreamUrl(videoId)
-          → for each client (ANDROID_VR, ANDROID, ANDROID_MUSIC, IOS_MUSIC):
-              POST /player (InnerTube, signed visitorData [+po_token])
-              → parse adaptiveFormats (audio, max bitrate) + video (muxed 18 or ≤720p video-only)
-              → validate URL (HTTP status), cache, return ResolvedStream(audioUrl, videoUrl, client)
+          → para cada cliente (ANDROID_VR, ANDROID, ANDROID_MUSIC, IOS_MUSIC):
+              POST /player (InnerTube, visitorData firmado [+po_token])
+              → parsea adaptiveFormats (audio, mayor bitrate) + video (muxed 18 o video-only ≤720p)
+              → valida la URL (estado HTTP), cachea, devuelve ResolvedStream(audioUrl, videoUrl, cliente)
   → ExoPlayerManager.playAudioVideo(audioUrl, videoUrl)
-      → MergingMediaSource(audio, video) via OkHttpDataSource + RangeFixingDataSource
-  → Queue: 15 similar videos preloaded; +10 more when 5 remain (InnerTubeSearch)
+      → MergingMediaSource(audio, video) vía OkHttpDataSource + RangeFixingDataSource
+  → Cola: 15 similares precargados; +10 más cuando quedan 5 (InnerTubeSearch)
 ```
 
-## Building
+## Compilación
 
-Requirements: JDK 17+, Android SDK 34.
+Requisitos: JDK 17+, Android SDK 34.
 
 ```bash
-# 1. Clone and open in Android Studio (or CLI):
+# 1. Clona y abre en Android Studio (o CLI):
 ./gradlew assembleDebug
 
-# 2. (Optional) Add your own keys to local.properties — NOT committed:
-youtubeApiKey=AIza...            # YouTube Data API v3 (optional: search/subs fallback)
-googleSignInClientId=....apps.googleusercontent.com   # (optional) Google sign-in
+# 2. (Opcional) Añade tus propias keys en local.properties — NO se commitean:
+youtubeApiKey=AIza...            # YouTube Data API v3 (opcional: fallback de búsqueda/suscripciones)
+googleSignInClientId=....apps.googleusercontent.com   # (opcional) inicio de sesión con Google
 
-# 3. Install:
+# 3. Instala:
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-> **No Google Cloud key is required** for playback/search: InnerTube resolution and WEB search work without it. The Data API key only powers subscriptions/playlists and API fallbacks.
+> **No se requiere key de Google Cloud** para reproducir ni buscar: la resolución InnerTube y la búsqueda WEB funcionan sin ella. La key de Data API solo alimenta suscripciones/playlists y los fallbacks.
 
-### Signed release builds
+### Build de release firmado
 
 ```bash
-# Generate a keystore once (keep it safe — it is NOT in the repo):
+# Genera un keystore una sola vez (guárdalo — NO está en el repo):
 keytool -genkeypair -v -keystore app/keystore/release.jks -alias mytube \
   -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=MyTube"
 
-# Configure credentials in key.properties (gitignored) or env vars:
+# Configura las credenciales en key.properties (gitignored) o variables de entorno:
 keystorePath=app/keystore/release.jks
 keystorePassword=...
 keyAlias=mytube
 keyPassword=...
-# (env fallback: KEYSTORE_PATH, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD)
+# (fallback por entorno: KEYSTORE_PATH, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD)
 
 ./gradlew assembleRelease
 apksigner verify --verbose --print-certs app/build/outputs/apk/release/app-release.apk
 ```
 
-## Debugging
+## Depuración
 
-- `StreamResolver` logs the cascade per video: `cliente= status= reason= pot=` and the winning resolution `resuelto videoId= cliente= bitrate=` (+ `video=true` when a video URL was resolved).
-- `InnerTubeClient` logs endpoint → HTTP code + first 80 bytes of the response body (e.g. `LOGIN_REQUIRED`, `Precondition check failed`, `UNPLAYABLE`).
-- Client validation on device: `adb logcat -s StreamResolver:* MusicStreamProvider:*`.
+- `StreamResolver` loguea la cascada por video: `cliente= status= reason= pot=` y la resolución ganadora `resuelto videoId= cliente= bitrate=` (+ `video=true` cuando se resolvió URL de video).
+- `InnerTubeClient` loguea el endpoint → código HTTP + primeros 80 bytes del body (p. ej. `LOGIN_REQUIRED`, `Precondition check failed`, `UNPLAYABLE`).
+- Validación en dispositivo: `adb logcat -s StreamResolver:* MusicStreamProvider:*`.
 
-## Known limitations
+## Limitaciones conocidas
 
-- InnerTube client versions expire over time; when `Precondition check failed`/`UNPLAYABLE` appears, bump the version map in `YouTubeClient.kt`.
-- Some videos are region-blocked (`UNPLAYABLE`) — YouTube decides per video/IP.
-- The synthetic `po_token` does **not** pass `WEB_REMIX`; mobile clients (ANDROID_VR/ANDROID) work without it today.
-- Queue is in-memory (lost on app restart); only watch/search history persists.
+- Las versiones de cliente InnerTube caducan; cuando aparezca `Precondition check failed`/`UNPLAYABLE`, actualiza el mapa de versiones en `YouTubeClient.kt`.
+- Algunos videos están bloqueados por región (`UNPLAYABLE`) — decide YouTube según video/IP.
+- El `po_token` sintético **no** pasa en `WEB_REMIX`; los clientes móviles (ANDROID_VR/ANDROID) funcionan sin él hoy.
+- La cola es en memoria (se pierde al reiniciar la app); solo el historial de búsqueda/reproducción es persistente.
 
-## License
+## Licencia
 
-[GPL-3.0](LICENSE). Not affiliated with Google or YouTube.
+[GPL-3.0](LICENSE). No afiliado con Google ni YouTube.
