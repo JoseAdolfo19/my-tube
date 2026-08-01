@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MyTube — Música continua, sin cortes</title>
-<meta name="description" content="MyTube: cliente de YouTube para música. Reproducción continua, solo música, géneros, mini player y segundo plano. Descarga la APK.">
+<meta name="description" content="MyTube: cliente de YouTube para música. Reproducción continua sin cortes, video visible, sin anuncios, sin cuotas de API. Descarga el APK.">
 <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16.png">
 <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png">
@@ -177,7 +177,9 @@
     <div class="badges">
       <span class="badge">Android 7.0+</span>
       <span class="badge">Open Source</span>
-      <span class="badge">Solo música</span>
+      <span class="badge">Sin anuncios</span>
+      <span class="badge">Sin cuotas de API</span>
+      <span class="badge">Video visible</span>
       <span class="badge">Cola infinita</span>
     </div>
     <div class="hero-shot">
@@ -199,6 +201,11 @@
         <div class="icon">🎵</div>
         <h3>Solo música</h3>
         <p>Feed, búsquedas y similares limitados a la categoría Música de YouTube. Nada de juegos, bromas ni noticias.</p>
+      </div>
+      <div class="card">
+        <div class="icon">⚡</div>
+        <h3>Sin cortes, sin cuotas</h3>
+        <p>Reproduce la canción completa usando el protocolo InnerTube directamente: sin API keys, sin cuotas de Google y sin el corte de ~1 minuto.</p>
       </div>
       <div class="card">
         <div class="icon">🎛️</div>
@@ -228,7 +235,7 @@
       <div class="card">
         <div class="icon">🔍</div>
         <h3>Búsqueda con historial</h3>
-        <p>Pantalla de búsqueda propia con historial persistente: borra, re-ejecuta y vuelve a tocar canciones buscadas antes.</p>
+        <p>Pantalla de búsqueda propia (InnerTube, sin cuotas) con historial persistente: borra, re-ejecuta y vuelve a tocar canciones buscadas antes.</p>
       </div>
       <div class="card">
         <div class="icon">🌗</div>
@@ -276,7 +283,7 @@
       <div class="card download-card">
         <span class="status ok">Disponible</span>
         <div class="platform">Android</div>
-        <div class="meta">Última versión estable · v1.0.0 · Requiere Android 7.0+</div>
+        <div class="meta">Última versión estable · v1.0.1 · Requiere Android 7.0+</div>
         <div class="actions">
           <a class="btn" href="https://github.com/JoseAdolfo19/my-tube/releases/latest/download/my-tube.apk" download>Descargar APK</a>
           <a class="btn btn-outline" href="https://github.com/JoseAdolfo19/my-tube/releases" target="_blank" rel="noopener">Versiones anteriores</a>
@@ -292,10 +299,10 @@
       </div>
     </div>
     <div class="notice">
-      <strong>Nota sobre el audio:</strong> para reproducción sin cortes (más allá de ~1 minuto), MyTube usa un
-      proxy local que resuelve el stream con po_token. Se lanza con
-      <code>python tools/audio_proxy.py 8080</code> en el PC y la app apunta a él
-      (o <code>adb reverse tcp:8080 tcp:8080</code> en desarrollo). Ver el README del repositorio.
+      <strong>Sin trucos ni claves:</strong> MyTube resuelve los streams y las búsquedas directamente con el
+      protocolo <strong>InnerTube</strong> de YouTube (como otros clientes de código abierto), por lo que
+      funciona sin API keys propias y sin cortes en la reproducción. La app no está afiliada a Google ni a YouTube.
+      Código abierto: <a href="https://github.com/JoseAdolfo19/my-tube" target="_blank" rel="noopener">github.com/JoseAdolfo19/my-tube</a>.
     </div>
   </div>
 </section>
