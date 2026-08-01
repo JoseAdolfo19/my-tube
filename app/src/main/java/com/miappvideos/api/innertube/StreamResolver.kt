@@ -108,6 +108,10 @@ object StreamResolver {
 
                 val playabilityStatus = playerResponse.optJSONObject("playabilityStatus")
                 val status = playabilityStatus?.optString("status") ?: continue
+                android.util.Log.d(
+                    "StreamResolver",
+                    "cliente=${client.clientName} status=$status reason=${playabilityStatus.optString("reason", "")} pot=${resolvePlayerPoToken(client) != null}"
+                )
                 if (status != "OK") {
                     val reason = playabilityStatus.optString("reason", "")
                     if (isBotDetectionError(reason)) {
@@ -145,7 +149,13 @@ object StreamResolver {
                     )
                     break
                 }
-                if (resolved != null) return@withContext resolved
+                if (resolved != null) {
+                    android.util.Log.d(
+                        "StreamResolver",
+                        "resuelto videoId=$videoId cliente=${resolved.clientName} bitrate=${resolved.bitrate}"
+                    )
+                    return@withContext resolved
+                }
                 lastError = IOException("no format valido para ${client.clientName}")
             }
             throw lastError ?: IOException("todos los clientes InnerTube fallaron para $videoId")
