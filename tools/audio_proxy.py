@@ -198,15 +198,28 @@ class Handler(http.server.BaseHTTPRequestHandler):
             cmd = [
                 sys.executable, "-m", "yt_dlp", "-v",
                 "-f", "bestaudio", "--no-playlist", "--no-warnings", "-g",
-                "--extractor-args", "youtube:player_client=web_safari,web_embedded",
+                "--extractor-args", "youtube:player_client=web_safari;pot_provider=bgutil",
                 f"https://www.youtube.com/watch?v={video_id}",
             ]
             try:
                 result = subprocess.run(cmd, capture_output=True, text=True,
                                         timeout=120)
-                diag = f"rc={result.returncode}\n--- STDOUT ---\n{result.stdout[-4000:]}\n--- STDERR ---\n{result.stderr[-4000:]}"
+                diag = f"=== POT bgutil ===\nrc={result.returncode}\n--- STDOUT ---\n{result.stdout[-2000:]}\n--- STDERR ---\n{result.stderr[-2500:]}"
             except subprocess.TimeoutExpired:
-                diag = "TIMEOUT 120s"
+                diag = "=== POT bgutil ===\nTIMEOUT 120s"
+            cmd2 = [
+                sys.executable, "-m", "yt_dlp", "-v",
+                "-f", "bestaudio", "--no-playlist", "--no-warnings", "-g",
+                "--extractor-args", "youtube:player_client=web_safari;pot_provider=cas",
+                f"https://www.youtube.com/watch?v={video_id}",
+            ]
+            try:
+                result2 = subprocess.run(cmd2, capture_output=True, text=True,
+                                         timeout=120)
+                diag2 = f"\n=== POT cas ===\nrc={result2.returncode}\n--- STDOUT ---\n{result2.stdout[-2000:]}\n--- STDERR ---\n{result2.stderr[-2500:]}"
+            except subprocess.TimeoutExpired:
+                diag2 = "\n=== POT cas ===\nTIMEOUT 120s"
+            diag = diag + diag2
             body = diag.encode()
             self.send_response(200)
             self.send_header("Content-Type", "text/plain")
