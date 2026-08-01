@@ -10,6 +10,19 @@ val localProperties = Properties().apply {
     if (f.exists()) f.inputStream().use { load(it) }
 }
 
+val keyProperties = Properties().apply {
+    val f = rootProject.file("key.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+
+fun String?.orEmptyEnv(envName: String): String? = this?.takeIf { it.isNotBlank() }
+    ?: System.getenv(envName)?.takeIf { it.isNotBlank() }
+
+val keystorePath = keyProperties.getProperty("keystorePath").orEmptyEnv("KEYSTORE_PATH")
+val keystorePassword = keyProperties.getProperty("keystorePassword").orEmptyEnv("KEYSTORE_PASSWORD")
+val keyAliasName = keyProperties.getProperty("keyAlias").orEmptyEnv("KEY_ALIAS")
+val keyPasswordValue = keyProperties.getProperty("keyPassword").orEmptyEnv("KEY_PASSWORD")
+
 android {
     namespace = "com.miappvideos"
     compileSdk = 34
@@ -33,6 +46,20 @@ android {
         )
     }
 
+    signingConfigs {
+        create("release") {
+            val storeFile_ = keystorePath?.let { rootProject.file(it) }
+            if (storeFile_ != null && storeFile_.exists() &&
+                keystorePassword != null && keyAliasName != null && keyPasswordValue != null
+            ) {
+                storeFile = storeFile_
+                storePassword = keystorePassword
+                keyAlias = keyAliasName
+                keyPassword = keyPasswordValue
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -40,6 +67,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {

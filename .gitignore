@@ -11,3 +11,7 @@
 local.properties
 tools/__pycache__/
 tools/cache/
+
+key.properties
+/app/keystore/
+
