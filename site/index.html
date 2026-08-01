@@ -115,6 +115,25 @@
   }
   .shot p { color: var(--muted); font-size: .85rem; margin-top: 10px; }
 
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+  .step {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px; text-align: center;
+  }
+  .step .num {
+    display: inline-grid; place-items: center;
+    width: 30px; height: 30px; border-radius: 999px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff; font-weight: 700; font-size: .85rem; margin-bottom: 12px;
+  }
+  .step img {
+    width: 100%; max-width: 220px; border-radius: 12px;
+    border: 1px solid var(--border); margin-bottom: 12px;
+  }
+  .step h4 { font-size: .95rem; margin-bottom: 6px; }
+  .step p { color: var(--muted); font-size: .85rem; }
+  .step.alt { border-style: dashed; }
+
   .downloads { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; max-width: 760px; margin: 0 auto; }
   .download-card { text-align: center; }
   .download-card .platform { font-size: 1.05rem; font-weight: 700; margin-bottom: 4px; }
@@ -160,6 +179,7 @@
     <nav class="nav-links">
       <a href="#features">Características</a>
       <a href="#shots">Capturas</a>
+      <a href="#gui">Guía de instalación</a>
       <a href="#downloads">Descargas</a>
       <a href="https://github.com/JoseAdolfo19/my-tube" target="_blank" rel="noopener">GitHub</a>
     </nav>
@@ -269,6 +289,93 @@
         <img src="img/ss_search.png" alt="Búsqueda con historial">
         <p>Búsqueda con historial persistente</p>
       </div>
+    </div>
+  </div>
+</section>
+
+<section id="gui">
+  <div class="container">
+    <div class="section-title">
+      <h2>Guía de instalación</h2>
+      <p>Todo el proceso paso a paso, capturado en un teléfono real.</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <span class="num">1</span>
+        <img src="img/gui/01_home.png" alt="Paso 1">
+        <h4>Abre el navegador</h4>
+        <p>Entra a <strong>mytubemusic.vercel.app</strong> desde cualquier navegador (Chrome, Edge, etc.).</p>
+      </div>
+      <div class="step">
+        <span class="num">2</span>
+        <img src="img/gui/02_web.png" alt="Paso 2">
+        <h4>Pulsa "Descargar APK"</h4>
+        <p>El botón rojo de la página principal descarga la última versión (v1.0.1, 11 MB).</p>
+      </div>
+      <div class="step">
+        <span class="num">3</span>
+        <img src="img/gui/03_chooser.png" alt="Paso 3">
+        <h4>Confirma la descarga</h4>
+        <p>Chrome pregunta dónde guardar el archivo <code>my-tube.apk</code>. Pulsa <strong>Descargar</strong>.</p>
+      </div>
+      <div class="step">
+        <span class="num">4</span>
+        <img src="img/gui/04_notification.png" alt="Paso 4">
+        <h4>Espera a que termine</h4>
+        <p>La descarga aparece en las notificaciones. Toca la notificación cuando diga "Descarga completada".</p>
+      </div>
+      <div class="step">
+        <span class="num">5</span>
+        <img src="img/gui/05_playprotect.png" alt="Paso 5">
+        <h4>Play Protect (primera vez)</h4>
+        <p>Al ser una app externa, Google muestra un aviso. Pulsa <strong>Más detalles</strong> y luego <strong>Instalar de todos modos</strong>. Es seguro: el código es abierto (GPL-3.0).</p>
+      </div>
+      <div class="step alt">
+        <span class="num">6*</span>
+        <img src="img/gui/06_files_home.png" alt="Paso 6">
+        <h4>Alternativa: desde Archivos</h4>
+        <p>Si el archivo no se abrió solo, ábrelo con la app <strong>Archivos</strong> (Files) y entra a <strong>Descargas</strong>.</p>
+      </div>
+      <div class="step alt">
+        <span class="num">7*</span>
+        <img src="img/gui/07_files_downloads.png" alt="Paso 7">
+        <h4>Toca my-tube.apk</h4>
+        <p>Ubica <code>my-tube.apk</code> (11.17 MB) y púlsalo para iniciar la instalación.</p>
+      </div>
+      <div class="step alt">
+        <span class="num">8*</span>
+        <img src="img/gui/10_trust_source.png" alt="Paso 8">
+        <h4>Confía en la fuente</h4>
+        <p>La primera vez Android pide habilitar <strong>"Confiar en esta fuente"</strong> para el gestor de archivos. Acéptalo.</p>
+      </div>
+      <div class="step">
+        <span class="num">9</span>
+        <img src="img/gui/08_confirm_install.png" alt="Paso 9">
+        <h4>Confirma la instalación</h4>
+        <p>Android muestra <strong>"¿Deseas instalar esta app?"</strong>. Pulsa <strong>Instalar</strong>.</p>
+      </div>
+      <div class="step">
+        <span class="num">10</span>
+        <img src="img/gui/09_installed.png" alt="Paso 10">
+        <h4>Instalación completada</h4>
+        <p>Cuando aparezca <strong>"Se instaló la app"</strong> pulsa <strong>Abrir</strong>.</p>
+      </div>
+      <div class="step">
+        <span class="num">11</span>
+        <img src="img/gui/11_notifications.png" alt="Paso 11">
+        <h4>Permite las notificaciones</h4>
+        <p>Pulsa <strong>Permitir</strong> para que la música siga sonando con sus controles al salir de la app.</p>
+      </div>
+      <div class="step">
+        <span class="num">12</span>
+        <img src="img/gui/12_app_open.png" alt="Paso 12">
+        <h4>¡A escuchar!</h4>
+        <p>MyTube abre con el feed de música por géneros. Toca cualquier canción y empieza la cola infinita.</p>
+      </div>
+    </div>
+    <div class="notice">
+      <strong>*Pasos opcionales (6-8):</strong> solo son necesarios si instalas desde la app de archivos. Si
+      descargaste desde el navegador, con los pasos 1-5 y 9-12 es suficiente.
     </div>
   </div>
 </section>
