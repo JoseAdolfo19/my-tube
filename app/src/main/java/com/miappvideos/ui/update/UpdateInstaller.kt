@@ -17,7 +17,7 @@ object UpdateInstaller {
 
             val request = android.app.DownloadManager.Request(uri)
                 .setTitle("MY-TUBE Update")
-                .setDescription("Descargando MY-TUBE 2.1.0")
+                .setDescription("Descargando actualización de MY-TUBE")
                 .setAllowedNetworkTypes(android.app.DownloadManager.Request.NETWORK_WIFI)
                 .setVisibleInDownloadsUi(false)
                 .setNotificationVisibility(android.app.DownloadManager.Request.VISIBILITY_VISIBLE)
@@ -26,19 +26,29 @@ object UpdateInstaller {
                     "mytube.apk"
                 )
 
-            val downloadId = downloadManager.enqueue(request)
+            downloadManager.enqueue(request)
 
-            // En un escenario real, verificaríamos SHA-256 y luego instalamos
-            // Por ahora, simulamos abriendo la app de instalación
-
-            // Abrir el archivo descargado (este es el flujo nativo de Android)
-            val file = java.io.File(context.getExternalFilesDir("downloads"), "mytube.apk")
-            if (file.exists()) {
-                intentInstall(context, uri)
-            }
-
+            // Nota: Para una implementación real, se requiere un BroadcastReceiver que escuche
+            // DownloadManager.ACTION_DOWNLOAD_COMPLETE para verificar el SHA-256
+            // y disparar la instalación. Por ahora, el flujo queda preparado para la validación.
         } catch (e: Exception) {
             Log.e(TAG, "Error installing update", e)
+        }
+    }
+
+    private fun verifySha256(file: java.io.File, expected: String): Boolean {
+        return try {
+            val digest = java.security.MessageDigest.getInstance("SHA-256")
+            file.inputStream().use { input ->
+                val buffer = ByteArray(8192)
+                var read: Int
+                while (input.read(buffer).also { read = it } != -1) digest.update(buffer, 0, read)
+            }
+            val actual = digest.digest().joinToString("") { "%02x".format(it) }
+            actual.equals(expected, ignoreCase = true)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error verifying SHA-256", e)
+            false
         }
     }
 

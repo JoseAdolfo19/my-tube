@@ -33,7 +33,7 @@ object UpdateManager {
     )
 
     fun interface OnUpdateAvailable {
-        fun onUpdateAvailable(versionCode: Int, versionName: String, apkUrl: String, releaseNotes: List<String>)
+        fun onUpdateAvailable(versionCode: Int, versionName: String, apkUrl: String, sha256: String, releaseNotes: List<String>)
     }
 
     fun interface OnNoUpdate {
@@ -55,6 +55,7 @@ object UpdateManager {
                     remote.versionCode,
                     remote.versionName,
                     remote.apkUrl,
+                    remote.sha256,
                     remote.releaseNotes
                 )
             } else {

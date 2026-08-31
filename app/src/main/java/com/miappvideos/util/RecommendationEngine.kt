@@ -149,8 +149,6 @@ class RecommendationEngine(
                 if (!isMusicVideo(v)) continue
                 if (sameSong(v.title, seed.title)) continue
                 if (similar.any { sameSong(it.title, v.title) }) continue
-                // Fix #3: Anti-repetición de artista consecutivo
-                if (v.uploaderName in recentArtists) continue
                 similar.add(v)
             }
         }
