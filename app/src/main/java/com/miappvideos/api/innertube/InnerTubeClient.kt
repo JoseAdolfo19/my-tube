@@ -45,8 +45,8 @@ class InnerTubeClient {
     }
 
     private suspend fun <T> withRetry(
-        maxAttempts: Int = 3,
-        initialDelay: Long = 500L,
+        maxAttempts: Int = 2,
+        initialDelay: Long = 300L,
         factor: Double = 2.0,
         block: suspend () -> T,
     ): T {

@@ -22,15 +22,18 @@ class RangeFixingDataSource(private val upstream: HttpDataSource) : HttpDataSour
     }
 
     override fun open(dataSpec: DataSpec): Long {
+        val hasGeoRestriction = dataSpec.uri.getQueryParameter("gcr") != null
+        val chunkLimit = if (hasGeoRestriction) MAX_CHUNK else Long.MAX_VALUE
+
         val fixed = if (dataSpec.length < 0L) {
             val clen = parseClen(dataSpec.uri)
-            val available: Long = if (clen != null) (clen - dataSpec.position).coerceAtLeast(1L) else MAX_CHUNK
+            val available = if (clen != null) (clen - dataSpec.position).coerceAtLeast(1L) else MAX_CHUNK
             dataSpec.buildUpon()
-                .setLength(available.coerceAtMost(MAX_CHUNK))
+                .setLength(available.coerceAtMost(chunkLimit))
                 .build()
         } else {
             dataSpec.buildUpon()
-                .setLength(dataSpec.length.coerceAtMost(MAX_CHUNK))
+                .setLength(dataSpec.length.coerceAtMost(chunkLimit))
                 .build()
         }
         return upstream.open(fixed)

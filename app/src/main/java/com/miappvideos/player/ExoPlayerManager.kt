@@ -46,7 +46,18 @@ class ExoPlayerManager(context: Context) {
         playAudioVideo(url, null, title)
     }
 
-    fun playAudioVideo(audioUrl: String, videoUrl: String?, title: String = "") {
+    fun playAudioVideo(
+        audioUrl: String,
+        videoUrl: String?,
+        title: String = "",
+        startPositionMs: Long = 0L,
+    ) {
+        // Detener y liberar codecs viejos antes de cargar nuevos, para evitar
+        // que el resource manager reclame los codecs durante la transicion
+        // (problema comun en emuladores y dispositivos con codecs software como opus).
+        player.stop()
+        player.clearMediaItems()
+
         val metadata = MediaMetadata.Builder()
             .setTitle(title)
             .setArtist("MyTube")
@@ -64,6 +75,9 @@ class ExoPlayerManager(context: Context) {
         }
         player.setMediaSource(source)
         player.prepare()
+        if (startPositionMs > 0L) {
+            player.seekTo(startPositionMs)
+        }
         player.play()
     }
 

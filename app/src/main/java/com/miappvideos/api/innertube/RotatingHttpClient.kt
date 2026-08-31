@@ -17,8 +17,8 @@ object ProxyPool {
 object RotatingHttpClient {
 
     private val client: OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(25, TimeUnit.SECONDS)
+        .connectTimeout(4, TimeUnit.SECONDS)
+        .readTimeout(8, TimeUnit.SECONDS)
         .proxySelector(object : java.net.ProxySelector() {
             override fun select(uri: java.net.URI?): List<Proxy> =
                 if (ProxyPool.proxies.isEmpty()) listOf(Proxy.NO_PROXY)

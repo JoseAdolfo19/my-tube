@@ -31,8 +31,8 @@ android {
         applicationId = "com.miappvideos"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 21
+        versionName = "2.1.0"
 
         buildConfigField(
             "String",
@@ -43,6 +43,16 @@ android {
             "String",
             "GOOGLE_SIGNIN_CLIENT_ID",
             "\"${localProperties.getProperty("googleSignInClientId", "")}\""
+        )
+        buildConfigField(
+            "String",
+            "PROXY_KEY",
+            "\"${localProperties.getProperty("proxyKey", "")}\""
+        )
+        buildConfigField(
+            "String",
+            "PROXY_PUBLIC_URL",
+            "\"${localProperties.getProperty("proxyPublicUrl", "https://mytube-proxy-q284.onrender.com")}\""
         )
     }
 

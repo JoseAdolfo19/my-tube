@@ -1,0 +1,13 @@
+{
+  "versionName": "2.1.0",
+  "versionCode": 21,
+  "mandatory": false,
+  "apkUrl": "https://mytube-proxy-q284.onrender.com/downloads/mytube-2.1.0.apk",
+  "sha256": "deadbeef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+  "releaseNotes": [
+    "Nuevo sistema de letras",
+    "Mejoras en reproducción",
+    "Nuevo gestor de descargas",
+    "Correcciones de errores"
+  ]
+}

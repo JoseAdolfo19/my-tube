@@ -1,7 +1,11 @@
 package com.miappvideos.api.innertube
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import org.json.JSONObject
@@ -18,17 +22,30 @@ object StreamResolver {
 
     private const val FAILED_CLIENT_BACKOFF_MS = 10 * 60 * 1000L
     private const val MAX_CANDIDATES_PER_CLIENT = 6
+    private const val RESOLVE_TIMEOUT_MS = 12_000L
 
-    private val MAIN_CLIENT = YouTubeClient.WEB_REMIX
-
-    private val STREAM_FALLBACK_CLIENTS = arrayOf(
-        YouTubeClient.IOS,
-        YouTubeClient.MOBILE,
-        YouTubeClient.ANDROID_MUSIC,
-        YouTubeClient.IOS_MUSIC,
+    // Clientes que devuelven URLs directas sin po_token (confirmado en pruebas).
+    // Se sondean en paralelo para que el arranque no dependa del fallo anti-bot
+    // de una sola version. ANDROID/MOBILE devuelve formatos pot-gated sin url.
+    private val PARALLEL_PROBE_CLIENTS = arrayOf(
         YouTubeClient.ANDROID_VR_NO_AUTH,
         YouTubeClient.ANDROID_VR_1_61_48,
         YouTubeClient.ANDROID_VR_1_43_32,
+    )
+
+    private val MAIN_CLIENT = YouTubeClient.WEB_REMIX
+
+    // Orden optimizado para arranque rapido: primero los clientes que funcionan
+    // sin login ni po_token (ANDROID_VR preferido, luego MOBILE). Los clientes
+    // web (WEB/WEB_REMIX) van al final porque exigen po_token/visitorData.
+    private val STREAM_FALLBACK_CLIENTS = arrayOf(
+        YouTubeClient.ANDROID_VR_NO_AUTH,
+        YouTubeClient.MOBILE,
+        YouTubeClient.ANDROID_VR_1_61_48,
+        YouTubeClient.ANDROID_VR_1_43_32,
+        YouTubeClient.ANDROID_MUSIC,
+        YouTubeClient.IOS_MUSIC,
+        YouTubeClient.IOS,
         YouTubeClient.ANDROID_CREATOR,
         YouTubeClient.ANDROID_TESTSUITE,
         YouTubeClient.ANDROID_UNPLUGGED,
@@ -48,8 +65,8 @@ object StreamResolver {
     private val streamUrlCache = ConcurrentHashMap<String, CachedStreamUrl>()
     private val failedStreamClientsUntil = ConcurrentHashMap<String, Long>()
     private val probeClient = OkHttpClient.Builder()
-        .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
-        .readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+        .connectTimeout(1000, java.util.concurrent.TimeUnit.MILLISECONDS)
+        .readTimeout(2000, java.util.concurrent.TimeUnit.MILLISECONDS)
         .build()
 
     @Volatile
@@ -69,23 +86,38 @@ object StreamResolver {
         }
     }
 
+    data class VideoQuality(
+        val itag: Int,
+        val label: String,
+        val url: String,
+    )
+
     data class ResolvedStream(
         val url: String,
         val expiresInSeconds: Int?,
         val clientName: String,
         val bitrate: Int,
         val videoUrl: String? = null,
+        val videoQualities: List<VideoQuality> = emptyList(),
+    )
+
+    data class DownloadStreams(
+        val audioUrl: String,
+        val audioMime: String,
+        val muxedUrl: String?,
+        val muxedMime: String?,
+        val clientName: String,
     )
 
     /**
-     * Resuelve la URL de audio para [videoId] probando clientes en cascada.
+     * Resuelve URLs para descarga: audio-only (preferible AAC/m4a) y el formato
+     * muxed (video+audio, itag 18) para descargar un .mp4 listo.
      */
-    suspend fun resolveStreamUrl(videoId: String): Result<ResolvedStream> = runCatching {
+    suspend fun resolveDownloadStreams(videoId: String): Result<DownloadStreams> = runCatching {
+        withTimeout(RESOLVE_TIMEOUT_MS) {
         withContext(Dispatchers.IO) {
             ensureVisitorData()
-            val signatureTimestamp = runCatching {
-                YoutubeJavaScriptPlayerManager.getSignatureTimestamp(videoId)
-            }.getOrNull()
+            var signatureTimestamp: Int? = null
 
             val orderedClients = buildList {
                 addAll(STREAM_FALLBACK_CLIENTS)
@@ -96,75 +128,386 @@ object StreamResolver {
 
             for (client in orderedClients) {
                 if (client.loginRequired) continue
-                if (isStreamClientTemporarilyBlocked(videoId, client.clientName)) continue
+                if (isStreamClientTemporarilyBlocked(videoId, clientBlockKey(client))) continue
+
+                val ts = if (client.useSignatureTimestamp) {
+                    signatureTimestamp ?: runCatching {
+                        YoutubeJavaScriptPlayerManager.getSignatureTimestamp(videoId)
+                    }.getOrNull()?.also { signatureTimestamp = it }
+                } else null
 
                 val playerResponse = runCatching {
                     innerTube.player(
                         client_ = client,
                         videoId = videoId,
-                        signatureTimestamp = signatureTimestamp,
+                        signatureTimestamp = ts,
                         poToken = resolvePlayerPoToken(client),
                     )
                 }.getOrNull() ?: continue
 
                 val playabilityStatus = playerResponse.optJSONObject("playabilityStatus")
-                val status = playabilityStatus?.optString("status") ?: continue
-                android.util.Log.d(
-                    "StreamResolver",
-                    "cliente=${client.clientName} status=$status reason=${playabilityStatus.optString("reason", "")} pot=${resolvePlayerPoToken(client) != null}"
-                )
-                if (status != "OK") {
-                    val reason = playabilityStatus.optString("reason", "")
-                    if (isBotDetectionError(reason)) {
-                        markStreamClientFailed(videoId, client.clientName, 403)
-                    }
+                if (playabilityStatus?.optString("status") != "OK") continue
+                val streamingData = playerResponse.optJSONObject("streamingData") ?: continue
+
+                val audio = pickDownloadAudio(streamingData.optJSONArray("adaptiveFormats")) ?: continue
+                val audioUrl = resolveDownloadFormatUrl(audio, videoId, client) ?: continue
+                if (!validateStatus(audioUrl, client)) {
+                    markStreamClientFailed(videoId, clientBlockKey(client), 403)
                     continue
                 }
 
-                val streamingData = playerResponse.optJSONObject("streamingData") ?: continue
-                val expiresInSeconds = streamingData.optInt("expiresInSeconds", 0).takeIf { it > 0 }
-                val formats = parseAudioFormats(streamingData.optJSONArray("adaptiveFormats"))
-
-                if (formats.isEmpty()) continue
-
-                var resolved: ResolvedStream? = null
-                for (format in formats.take(MAX_CANDIDATES_PER_CLIENT)) {
-                    val cacheKey = "$videoId:${format.itag}"
-                    val cached = streamUrlCache[cacheKey]
-                    val url = if (cached != null && cached.expiresAtMs > System.currentTimeMillis()) {
-                        cached.url
-                    } else {
-                        resolveFormatUrl(format, videoId, client) ?: continue
-                    }
-                    if (!validateStatus(url, client)) {
-                        markStreamClientFailed(videoId, client.clientName, 403)
-                        continue
-                    }
-                    val ttl = (expiresInSeconds ?: 21600) * 1000L
-                    streamUrlCache[cacheKey] = CachedStreamUrl(url, System.currentTimeMillis() + ttl)
-
-                    val videoUrl = resolveVideoUrl(streamingData, videoId, client)
-
-                    resolved = ResolvedStream(
-                        url = url,
-                        expiresInSeconds = expiresInSeconds,
-                        clientName = client.clientName,
-                        bitrate = format.bitrate,
-                        videoUrl = videoUrl,
-                    )
-                    break
+                val muxed = pickMuxedFormat(streamingData.optJSONArray("formats"))
+                val muxedUrl = muxed?.let {
+                    val u = resolveDownloadFormatUrl(it, videoId, client) ?: return@let null
+                    if (validateStatus(u, client)) u else null
                 }
-                if (resolved != null) {
-                    android.util.Log.d(
-                        "StreamResolver",
-                        "resuelto videoId=$videoId cliente=${resolved.clientName} bitrate=${resolved.bitrate}"
-                    )
-                    return@withContext resolved
-                }
-                lastError = IOException("no format valido para ${client.clientName}")
+
+                android.util.Log.d(
+                    "StreamResolver",
+                    "descarga resuelto videoId=$videoId cliente=${client.clientName} audio=${audio.mimeType} muxed=${muxedUrl != null}"
+                )
+                return@withContext DownloadStreams(
+                    audioUrl = audioUrl,
+                    audioMime = audio.mimeType.ifBlank { "audio/mp4" },
+                    muxedUrl = muxedUrl,
+                    muxedMime = muxed?.mimeType,
+                    clientName = client.clientName,
+                )
             }
             throw lastError ?: IOException("todos los clientes InnerTube fallaron para $videoId")
         }
+        }
+    }
+
+    private fun resolveDownloadFormatUrl(format: Format, videoId: String, client: YouTubeClient): String? {
+        val raw = resolveFormatUrlRaw(format, client)
+        if (raw != null && validateStatus(raw, client)) return raw
+        val deobfuscated = resolveFormatUrlDeobfuscated(format, videoId, client)
+        if (deobfuscated != null && validateStatus(deobfuscated, client)) return deobfuscated
+        return raw ?: deobfuscated
+    }
+
+    data class DownloadOption(
+        val label: String,
+        val url: String,
+        val mime: String,
+        val ext: String,
+    )
+
+    data class DownloadOptions(
+        val audio: List<DownloadOption>,
+        val video: List<DownloadOption>,
+    )
+
+    /**
+     * Resuelve TODAS las opciones de descarga disponibles: audios por bitrate y
+     * videos por resolucion. Para videos prefiere muxed (con audio incluido).
+     */
+    suspend fun resolveDownloadOptions(videoId: String): Result<DownloadOptions> = runCatching {
+        withTimeout(RESOLVE_TIMEOUT_MS) {
+        withContext(Dispatchers.IO) {
+            ensureVisitorData()
+            var signatureTimestamp: Int? = null
+            val orderedClients = buildList {
+                addAll(STREAM_FALLBACK_CLIENTS)
+                add(MAIN_CLIENT)
+            }.distinct()
+
+            for (client in orderedClients) {
+                if (client.loginRequired) continue
+                if (isStreamClientTemporarilyBlocked(videoId, clientBlockKey(client))) continue
+
+                val ts = if (client.useSignatureTimestamp) {
+                    signatureTimestamp ?: runCatching {
+                        YoutubeJavaScriptPlayerManager.getSignatureTimestamp(videoId)
+                    }.getOrNull()?.also { signatureTimestamp = it }
+                } else null
+
+                val playerResponse = runCatching {
+                    innerTube.player(
+                        client_ = client,
+                        videoId = videoId,
+                        signatureTimestamp = ts,
+                        poToken = resolvePlayerPoToken(client),
+                    )
+                }.getOrNull() ?: continue
+
+                if (playerResponse.optJSONObject("playabilityStatus")?.optString("status") != "OK") continue
+                val streamingData = playerResponse.optJSONObject("streamingData") ?: continue
+
+                val audio = parseAudioFormats(streamingData.optJSONArray("adaptiveFormats"))
+                    .mapNotNull { f ->
+                        val url = resolveFormatUrlRaw(f, client) ?: return@mapNotNull null
+                        val kbps = (f.bitrate / 1000).coerceAtLeast(1)
+                        DownloadOption(
+                            label = "MP3 $kbps kbps",
+                            url = url,
+                            mime = f.mimeType.substringBefore(";").ifBlank { "audio/mp4" },
+                            ext = "mp3",
+                        )
+                    }
+
+                val muxedAvailable = (streamingData.optJSONArray("formats")?.length() ?: 0) > 0
+                val video = parseVideoFormats(streamingData)
+                    .filter { it.height > 0 }
+                    .groupBy { it.height }
+                    .map { (_, g) -> g.maxByOrNull { it.bitrate }!! }
+                    .sortedByDescending { it.height }
+                    .mapNotNull { f ->
+                        val url = resolveFormatUrlRaw(f, client) ?: return@mapNotNull null
+                        val suffix = if (muxedAvailable) "" else " (sin audio)"
+                        val ext = if (f.mimeType.contains("webm")) "webm" else "mp4"
+                        DownloadOption(
+                            label = "MP4 ${f.height}p$suffix",
+                            url = url,
+                            mime = f.mimeType.substringBefore(";").ifBlank { "video/mp4" },
+                            ext = ext,
+                        )
+                    }
+
+                if (audio.isEmpty()) continue
+
+                android.util.Log.d(
+                    "StreamResolver",
+                    "download options videoId=$videoId cliente=${client.clientName} audios=${audio.size} videos=${video.size}"
+                )
+                return@withContext DownloadOptions(audio = audio, video = video)
+            }
+            throw IOException("sin opciones de descarga para $videoId")
+        }
+        }
+    }
+
+    private fun pickDownloadAudio(jsonArray: org.json.JSONArray?): Format? {
+        val formats = parseAudioFormats(jsonArray)
+        if (formats.isEmpty()) return null
+        return formats.firstOrNull { it.mimeType.contains("audio/mp4") } ?: formats.first()
+    }
+
+    private fun pickMuxedFormat(jsonArray: org.json.JSONArray?): Format? {
+        if (jsonArray == null) return null
+        val muxed = mutableListOf<Format>()
+        for (i in 0 until jsonArray.length()) {
+            val item = jsonArray.optJSONObject(i) ?: continue
+            if (item.optInt("width", 0) <= 0) continue
+            val url = item.optString("url").takeIf { it.isNotBlank() }
+            val signatureCipher = item.optString("signatureCipher").takeIf { it.isNotBlank() }
+            val cipher = item.optString("cipher").takeIf { it.isNotBlank() }
+            if (url == null && signatureCipher == null && cipher == null) continue
+            muxed.add(
+                Format(
+                    itag = item.optInt("itag", 0),
+                    url = url,
+                    mimeType = item.optString("mimeType", ""),
+                    bitrate = item.optInt("bitrate", 0),
+                    signatureCipher = signatureCipher,
+                    cipher = cipher,
+                    height = item.optInt("height", 0),
+                )
+            )
+        }
+        if (muxed.isEmpty()) return null
+        return muxed.firstOrNull { it.itag == 18 }
+            ?: muxed.minByOrNull { it.height }
+    }
+
+    private val inflightResolve = ConcurrentHashMap<String, kotlinx.coroutines.Deferred<Result<ResolvedStream>>>()
+
+    /**
+     * Resuelve la URL de audio para [videoId] probando clientes en cascada.
+     * [PARALLEL_PROBE_CLIENTS] se sondean en paralelo para que el arranque no
+     * dependa del fallo anti-bot de una sola version.
+     * Se deduplica por videoId (single-flight): varias llamadas concurrentes
+     * al mismo video comparten una sola resolucion.
+     */
+    suspend fun resolveStreamUrl(videoId: String): Result<ResolvedStream> {
+        inflightResolve[videoId]?.let { return it.await() }
+        return coroutineScope {
+            val deferred = async(Dispatchers.IO) { resolveStreamUrlInternal(videoId) }
+            inflightResolve[videoId] = deferred
+            try {
+                deferred.await()
+            } finally {
+                inflightResolve.remove(videoId, deferred)
+            }
+        }
+    }
+
+    private suspend fun resolveStreamUrlInternal(videoId: String): Result<ResolvedStream> = runCatching {
+        withTimeout(RESOLVE_TIMEOUT_MS) {
+        withContext(Dispatchers.IO) {
+            ensureVisitorData()
+
+            val orderedClients = buildList {
+                addAll(STREAM_FALLBACK_CLIENTS)
+                add(MAIN_CLIENT)
+            }.distinct()
+
+            val parallelClients = PARALLEL_PROBE_CLIENTS
+                .filter { !it.loginRequired && !isStreamClientTemporarilyBlocked(videoId, clientBlockKey(it)) }
+
+            val needsTimestamp = parallelClients.any { it.useSignatureTimestamp }
+            val signatureTimestamp = if (needsTimestamp) {
+                runCatching {
+                    YoutubeJavaScriptPlayerManager.getSignatureTimestamp(videoId)
+                }.getOrNull()
+            } else null
+
+            val parallelResults = coroutineScope {
+                parallelClients.map { client ->
+                    async { tryResolveForClient(videoId, client, signatureTimestamp) }
+                }.awaitAll()
+            }
+            parallelResults.firstOrNull { it != null }?.let { return@withContext it }
+
+            val probedKeys = parallelClients.map { clientBlockKey(it) }.toSet()
+            for (client in orderedClients) {
+                if (client.loginRequired) continue
+                if (clientBlockKey(client) in probedKeys) continue
+                if (isStreamClientTemporarilyBlocked(videoId, clientBlockKey(client))) continue
+                val resolved = tryResolveForClient(videoId, client, signatureTimestamp) ?: continue
+                return@withContext resolved
+            }
+            throw IOException("todos los clientes InnerTube fallaron para $videoId")
+        }
+        }
+    }
+
+    private suspend fun tryResolveForClient(
+        videoId: String,
+        client: YouTubeClient,
+        signatureTimestamp: Int?,
+    ): ResolvedStream? {
+        val ts = if (client.useSignatureTimestamp) signatureTimestamp else null
+
+        val playerResponse = runCatching {
+            innerTube.player(
+                client_ = client,
+                videoId = videoId,
+                signatureTimestamp = ts,
+                poToken = resolvePlayerPoToken(client),
+            )
+        }.getOrNull() ?: return null
+
+        val playabilityStatus = playerResponse.optJSONObject("playabilityStatus")
+        val status = playabilityStatus?.optString("status") ?: return null
+        android.util.Log.d(
+            "StreamResolver",
+            "cliente=${client.clientName} status=$status reason=${playabilityStatus.optString("reason", "")} pot=${resolvePlayerPoToken(client) != null}"
+        )
+        if (status != "OK") {
+            val reason = playabilityStatus.optString("reason", "")
+            if (isBotDetectionError(reason)) {
+                markStreamClientFailed(videoId, clientBlockKey(client), 403)
+            }
+            return null
+        }
+
+        val streamingData = playerResponse.optJSONObject("streamingData") ?: return null
+        val expiresInSeconds = streamingData.optInt("expiresInSeconds", 0).takeIf { it > 0 }
+        val formats = parseAudioFormats(streamingData.optJSONArray("adaptiveFormats"))
+
+        if (formats.isEmpty()) {
+            val arr = streamingData.optJSONArray("adaptiveFormats")
+            var sinWidth = 0
+            var sample: String? = null
+            for (i in 0 until (arr?.length() ?: 0)) {
+                val item = arr.optJSONObject(i) ?: continue
+                if (!item.has("width")) {
+                    sinWidth++
+                    if (sample == null) sample = item.toString().take(400)
+                }
+            }
+            android.util.Log.d(
+                "StreamResolver",
+                "cliente=${client.clientName} SIN formatos adaptive=${arr?.length() ?: -1} audioCandidatos=$sinWidth ejemplo=$sample"
+            )
+            return null
+        }
+
+        var resolved: ResolvedStream? = null
+        resolved = coroutineScope {
+            formats.take(3).map { format ->
+                async { resolveFormatForVideo(videoId, format, client, expiresInSeconds, streamingData) }
+            }.awaitAll().firstOrNull { it != null }
+        }
+        if (resolved != null) {
+            android.util.Log.d(
+                "StreamResolver",
+                "resuelto videoId=$videoId cliente=${resolved.clientName} bitrate=${resolved.bitrate}"
+            )
+        }
+        return resolved
+    }
+
+    private suspend fun resolveFormatForVideo(
+        videoId: String,
+        format: Format,
+        client: YouTubeClient,
+        expiresInSeconds: Int?,
+        streamingData: JSONObject,
+    ): ResolvedStream? {
+        val cacheKey = "$videoId:${format.itag}"
+        val now = System.currentTimeMillis()
+        val cached = streamUrlCache[cacheKey]
+        val cachedFresh = cached?.expiresAtMs?.let { it > now } == true
+
+        var url: String? = if (cachedFresh) cached!!.url else resolveFormatUrlRaw(format, client)
+        if (!cachedFresh) {
+            if (url == null || !validateStatus(url, client)) {
+                val deobfuscated = resolveFormatUrlDeobfuscated(format, videoId, client)
+                url = if (deobfuscated != null && validateStatus(deobfuscated, client)) {
+                    deobfuscated
+                } else {
+                    null
+                }
+            }
+            if (url == null) {
+                android.util.Log.d(
+                    "StreamResolver",
+                    "cliente=${client.clientName} itag=${format.itag} URL_INVALIDA"
+                )
+                markStreamClientFailed(videoId, clientBlockKey(client), 403)
+                return null
+            }
+        }
+        val resolvedUrl = url!!
+
+        val ttl = (expiresInSeconds ?: 21600) * 1000L
+        streamUrlCache[cacheKey] = CachedStreamUrl(resolvedUrl, now + ttl)
+
+        val videoUrl = resolveVideoUrl(streamingData, videoId, client)
+        val qualities = collectVideoQualities(streamingData, client)
+
+        return ResolvedStream(
+            url = resolvedUrl,
+            expiresInSeconds = expiresInSeconds,
+            clientName = client.clientName,
+            bitrate = format.bitrate,
+            videoUrl = videoUrl,
+            videoQualities = qualities,
+        )
+    }
+
+    /**
+     * Recolecta las calidades de video disponibles (muxed + video-only) con URL
+     * directa. Deduplica por altura y ordena de mayor a menor resolucion.
+     */
+    private fun collectVideoQualities(
+        streamingData: JSONObject,
+        client: YouTubeClient,
+    ): List<VideoQuality> {
+        return runCatching {
+            parseVideoFormats(streamingData)
+                .filter { it.height > 0 }
+                .groupBy { it.height }
+                .map { (_, group) -> group.maxByOrNull { it.bitrate }!! }
+                .sortedByDescending { it.height }
+                .mapNotNull { f ->
+                    val url = resolveFormatUrlRaw(f, client) ?: return@mapNotNull null
+                    VideoQuality(itag = f.itag, label = "${f.height}p", url = url)
+                }
+        }.getOrDefault(emptyList())
     }
 
     private fun resolvePlayerPoToken(client: YouTubeClient): String? {
@@ -173,7 +516,12 @@ object StreamResolver {
         return syntheticPoToken
     }
 
-    private fun resolveFormatUrl(
+    private fun resolveFormatUrlRaw(format: Format, client: YouTubeClient): String? {
+        val directUrl = format.url ?: return null
+        return patchUrl(directUrl, client)
+    }
+
+    private fun resolveFormatUrlDeobfuscated(
         format: Format,
         videoId: String,
         client: YouTubeClient,
@@ -181,13 +529,9 @@ object StreamResolver {
         val directUrl = format.url
         var url: String
         if (directUrl != null) {
-            url = if (directUrl.toHttpUrlOrNull()?.queryParameter("n")?.isNotBlank() == true) {
-                runCatching {
-                    YoutubeJavaScriptPlayerManager.getUrlWithThrottlingParameterDeobfuscated(videoId, directUrl)
-                }.getOrElse { directUrl }
-            } else {
-                directUrl
-            }
+            url = runCatching {
+                YoutubeJavaScriptPlayerManager.getUrlWithThrottlingParameterDeobfuscated(videoId, directUrl)
+            }.getOrElse { directUrl }
         } else {
             val cipherString = format.signatureCipher ?: format.cipher ?: return null
             val params = parseQueryString(cipherString)
@@ -201,16 +545,18 @@ object StreamResolver {
                 YoutubeJavaScriptPlayerManager.getUrlWithThrottlingParameterDeobfuscated(videoId, url)
             }.getOrElse { url }
         }
-
-        url = patchClientVersion(url, client.clientVersion)
-
-        val token = resolvePlayerPoToken(client)
-        if (token != null && url.contains("pot=").not()) {
-            val separator = if (url.contains("?")) "&" else "?"
-            url = "$url${separator}pot=$token"
-        }
-        url
+        patchUrl(url, client)
     }.getOrNull()
+
+    private fun patchUrl(url: String, client: YouTubeClient): String {
+        var result = patchClientVersion(url, client.clientVersion)
+        val token = resolvePlayerPoToken(client)
+        if (token != null && result.contains("pot=").not()) {
+            val separator = if (result.contains("?")) "&" else "?"
+            result = "$result${separator}pot=$token"
+        }
+        return result
+    }
 
     private fun patchClientVersion(url: String, clientVersion: String): String {
         if (!url.contains("cver=")) return url
@@ -297,18 +643,27 @@ object StreamResolver {
         val candidates = parseVideoFormats(streamingData)
         for (format in candidates.take(3)) {
             val cacheKey = "v:$videoId:${format.itag}"
+            val now = System.currentTimeMillis()
             val cached = streamUrlCache[cacheKey]
-            val url = if (cached != null && cached.expiresAtMs > System.currentTimeMillis()) {
-                cached.url
+            val cachedFresh = cached?.expiresAtMs?.let { it > now } == true
+            val url = if (cachedFresh) {
+                cached!!.url
             } else {
-                resolveFormatUrl(format, videoId, client) ?: continue
+                resolveVideoFormatUrl(format, videoId, client) ?: continue
             }
-            if (!validateStatus(url, client)) continue
-            streamUrlCache[cacheKey] =
-                CachedStreamUrl(url, System.currentTimeMillis() + 21600 * 1000L)
+            if (!cachedFresh && !validateStatus(url, client)) continue
+            streamUrlCache[cacheKey] = CachedStreamUrl(url, now + 21600 * 1000L)
             return url
         }
         return null
+    }
+
+    private fun resolveVideoFormatUrl(format: Format, videoId: String, client: YouTubeClient): String? {
+        val raw = resolveFormatUrlRaw(format, client)
+        if (raw != null && validateStatus(raw, client)) return raw
+        val deobfuscated = resolveFormatUrlDeobfuscated(format, videoId, client)
+        if (deobfuscated != null && validateStatus(deobfuscated, client)) return deobfuscated
+        return raw ?: deobfuscated
     }
 
     private data class Format(
@@ -410,6 +765,9 @@ object StreamResolver {
         }
         return params
     }
+
+    private fun clientBlockKey(client: YouTubeClient): String =
+        "${client.clientName}#${client.clientVersion}"
 
     private fun markStreamClientFailed(videoId: String, clientKey: String?, httpStatusCode: Int?) {
         if (httpStatusCode != 403) return

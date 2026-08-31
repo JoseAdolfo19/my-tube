@@ -15,13 +15,16 @@ Cliente Android de YouTube orientado a música. Reproducción continua (cola inf
 ## Características destacadas
 
 - **Catálogo solo música** — el feed, los filtros de género y las búsquedas están limitados a la categoría Música de YouTube.
-- **Cola infinita** — al reproducir una canción se cargan 15 similares; cuando quedan 5 se agregan 10 más. Nunca repite.
+- **Cola infinita** — al reproducir una canción se cargan 15 similares; cuando quedan 5 se agregan 10 más. Nunca repite y, además, evita repetir el mismo autor seguido y favorece el género seleccionado (ver *Recomendaciones* abajo).
+- **Recomendaciones sin repetir** — motor de ranking local (`RecommendationEngine`) que se aplica al feed y a la cola: excluye canciones ya vistas/historial, penaliza el mismo autor que la canción actual y premia el género del chip/búsqueda activos.
 - **Video visible** — ExoPlayer renderiza la pista de video (muxed itag 18 o video-only ≤720p) combinada con el audio mediante `MergingMediaSource`.
+- **Descargas MP3/MP4** — desde el menú de opciones de cada video se descarga audio (stream de audio, .mp3) o video (formato muxed itag 18, .mp4) a la carpeta Descargas/MyTube con notificación de progreso.
 - **Sin dependencia de cuotas** — la búsqueda, el trending y los streams se resuelven directamente con el protocolo **InnerTube** de YouTube (el mismo mecanismo que usan OpenTune/Innertune): no se necesita cuota de Google Cloud para la reproducción principal.
 - **Segundo plano** — `PlayerService` en foreground con notificación de MediaSession; mini player y PiP.
 - **Búsqueda con historial persistente** — pantalla propia de búsqueda con consultas recientes (borrar, re-ejecutar, re-reproducir).
 - **Inicio de sesión opcional con Google** — suscripciones y playlists vía YouTube Data API v3 (requiere tu propia key).
 - **Tema claro/oscuro** — tarjetas estilo YouTube con duración, vistas y fecha relativa.
+- **Ahorro de datos** — activable en Opciones: reproduce solo audio (sin pista de video) y reduce el prefetch de la cola a un solo siguiente.
 
 ## Capturas
 
@@ -49,6 +52,40 @@ Las versiones de perfil de cliente y la API key de InnerTube se actualizan en:
 - Fallbacks: `YouTubeDataManager` (Data API v3, requiere tu key en `local.properties`) → Piped API.
 
 Se usa desde `MainActivity` (trending + autoplay de "similares") y `SearchActivity`.
+
+## Recomendaciones (qué algoritmo usan OpenTune/YouTube y qué hace MyTube)
+
+El ranking "por preferencias" de YouTube es una red neuronal server-side (candidate generation con embeddings + deep ranking) que **no** se puede replicar en el dispositivo. OpenTune/Innertune y MyTube no la reimplementan: le piden a YouTube sus propios candidatos y después los **filtran y reordenan localmente**:
+
+1. **Candidatos de YouTube** — MyTube usa la búsqueda InnerTube (client WEB) por título+artista y por el género activo; YouTube devuelve canciones ya ordenadas por su similitud musical.
+2. **Sin repetición** — se excluyen los `videoId` ya en la cola y en el historial de reproducción, y títulos normalizados duplicados.
+3. **Sin mismo autor seguido** — `RecommendationEngine.sameAuthor()` normaliza autores (quita `VEVO`, `Topic`, `Official`, acentos) y penaliza fuerte el autor de la canción actual y los autores recientes; además reordena la lista para que no caigan dos autores iguales consecutivos.
+4. **Mismo género** — los chips de género y la búsqueda guardan la categoría activa; `genreFromQuery()` la mapea a `RecommendationEngine.GENRES` y las canciones que coinciden con ese género reciben un bonus de ranking (además de añadir una búsqueda extra del género cuando faltan candidatos).
+5. **Calidad musical** — se puntúan los canales oficiales (VEVO/Topic/video oficial) y se penalizan los canales de letras.
+
+Este ranking se aplica en el feed (`loadTrending`) y en la cola (`findSimilarVideos`, `searchNewVideos`).
+
+## Descargas MP3/MP4
+
+Desde el menú ⋮ de un video: **Descargar audio (MP3)** o **Descargar video (MP4)**.
+
+- Resuelve las URLs con `StreamResolver.resolveDownloadStreams()` (misma cascada InnerTube).
+- MP3 → stream de audio (prefiere AAC/m4a; el MP3 real requeriría transcodificación con FFmpeg, que no está incluida). Se guarda con extensión `.mp3`.
+- MP4 → formato muxed itag 18 (video+audio en un solo archivo `.mp4`). Si el video no lo ofrece, avisa que no está disponible.
+- Guarda en `Descargas/MyTube` vía MediaStore (Android 10+) o almacenamiento externo con permiso (Android 9-). El progreso se muestra en una notificación foreground (`DownloadService`).
+
+## Arranque rápido de reproducción
+
+Para llegar a <1,5 s desde el toque hasta el audio (medido ~1,2 s en pruebas):
+
+- La cascada de clientes prueba primero los que funcionan sin login ni `po_token` (`ANDROID_VR`) — los clientes web quedan al final.
+- **Sondeo en paralelo**: las 3 variantes de `ANDROID_VR` se consultan a la vez (`resolveStreamUrl`); el arranque no depende de que una sola versión esté bloqueada por anti-bot.
+- **Single-flight por videoId**: varias llamadas concurrentes al mismo vídeo (play + preload) comparten una sola resolución, sin duplicar peticiones.
+- `visitorData` se precarga al iniciar la app (`StreamResolver.ensureVisitorData()`), no al tocar una canción.
+- Las URLs de stream validadas se cachean; al reproducir desde cache no se vuelve a hacer el probe de rango.
+- **Probe de rango en paralelo** entre los formatos candidatos y timeouts cortos (conexión 1 s, lectura 2 s) para fallar rápido y pasar al siguiente fallback.
+- Timeouts globales: resolución tope 12 s (`withTimeout`), retries 2 con retroceso, `RotatingHttpClient` conexión 4 s / lectura 8 s.
+- `ANDROID`/MOBILE queda fuera del camino rápido: YouTube le devuelve formatos pot-gated sin URL directa.
 
 ## Arquitectura
 
@@ -143,6 +180,8 @@ El motor de reproducción de MyTube está inspirado en **[OpenTune](https://gith
 - Algunos videos están bloqueados por región (`UNPLAYABLE`) — decide YouTube según video/IP.
 - El `po_token` sintético **no** pasa en `WEB_REMIX`; los clientes móviles (ANDROID_VR/ANDROID) funcionan sin él hoy.
 - La cola es en memoria (se pierde al reiniciar la app); solo el historial de búsqueda/reproducción es persistente.
+- La descarga "MP3" guarda el stream de audio de YouTube (AAC/Opus) con extensión `.mp3`; para MP3 real se necesitaría FFmpeg.
+- La calidad del video visible depende de la red; con el ahorro de datos activo se reproduce solo audio.
 
 ## Pendiente: error 10 en inicio de sesión con Google
 

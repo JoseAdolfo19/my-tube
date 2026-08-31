@@ -24,20 +24,21 @@ object MusicStreamProvider {
     private const val TAG = "MusicStreamProvider"
     private const val PROXY_LAN = "http://192.168.187.240:8080"
     private const val PROXY_USB = "http://127.0.0.1:8080"
-    private const val PROXY_PUBLIC = "https://mytube-proxy-q284.onrender.com"
-    private const val PROXY_KEY = "mytube-2026-proxy"
+    private val PROXY_PUBLIC = com.miappvideos.BuildConfig.PROXY_PUBLIC_URL
+    private val PROXY_KEY = com.miappvideos.BuildConfig.PROXY_KEY
 
     private val probeClient = OkHttpClient.Builder()
-        .connectTimeout(1500, TimeUnit.MILLISECONDS)
-        .readTimeout(2500, TimeUnit.MILLISECONDS)
+        .connectTimeout(800, TimeUnit.MILLISECONDS)
+        .readTimeout(1500, TimeUnit.MILLISECONDS)
         .build()
 
-    private val cache = mutableMapOf<String, String?>()
+    private val cache = java.util.concurrent.ConcurrentHashMap<String, String?>()
 
     data class StreamResult(
         val audioUrl: String,
         val videoUrl: String?,
         val clientName: String? = null,
+        val videoQualities: List<com.miappvideos.api.innertube.StreamResolver.VideoQuality> = emptyList(),
     )
 
     suspend fun getStream(videoId: String): StreamResult? = withContext(Dispatchers.IO) {
@@ -72,8 +73,13 @@ object MusicStreamProvider {
     private suspend fun fetchStreamFromInnerTube(videoId: String): StreamResult? {
         val result = StreamResolver.resolveStreamUrl(videoId)
         return result.getOrNull()?.let {
-            Log.d(TAG, "InnerTube OK (${it.clientName}) para $videoId video=${it.videoUrl != null}")
-            StreamResult(audioUrl = it.url, videoUrl = it.videoUrl, clientName = it.clientName)
+            Log.d(TAG, "InnerTube OK (${it.clientName}) para $videoId video=${it.videoUrl != null} calidades=${it.videoQualities.size}")
+            StreamResult(
+                audioUrl = it.url,
+                videoUrl = it.videoUrl,
+                clientName = it.clientName,
+                videoQualities = it.videoQualities,
+            )
         }
     }
 
@@ -103,7 +109,10 @@ object MusicStreamProvider {
     }
 
     private fun fetchFromProxy(videoId: String): String? {
-        for (base in listOf(PROXY_LAN, PROXY_USB, PROXY_PUBLIC)) {
+        val bases = listOf(PROXY_LAN, PROXY_USB, PROXY_PUBLIC)
+        var available: String? = null
+        var lastError: Exception? = null
+        for (base in bases) {
             try {
                 val url = "$base/audio?v=$videoId" + if (PROXY_KEY.isNotEmpty()) "&key=$PROXY_KEY" else ""
                 val probe = Request.Builder()
@@ -112,15 +121,20 @@ object MusicStreamProvider {
                     .build()
                 probeClient.newCall(probe).execute().use { response ->
                     if (response.isSuccessful) {
-                        Log.d(TAG, "Proxy OK ($base) para $videoId")
-                        return url
+                        available = url
                     }
                 }
             } catch (e: Exception) {
-                Log.d(TAG, "Proxy $base no disponible para $videoId: ${e.message}")
+                lastError = e
             }
+            if (available != null) break
         }
-        return null
+        if (available != null) {
+            Log.d(TAG, "Proxy OK para $videoId")
+        } else {
+            Log.d(TAG, "Proxies no disponibles para $videoId: ${lastError?.message}")
+        }
+        return available
     }
 
     private suspend fun fetchFromExistingProvider(videoId: String): String? {
